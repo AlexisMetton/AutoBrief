@@ -1,4 +1,4 @@
-# 🤖 AutoBrief - Veille Automatisée
+# AutoBrief - Veille Automatisée
 
 > **Automatisez votre veille en intelligence artificielle en analysant vos newsletters et en générant des résumés personnalisés.**
 

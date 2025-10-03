@@ -50,14 +50,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main():
-    # Debug des secrets
+    # Debug des secrets (temporaire)
     try:
-        st.write("🔍 Debug des secrets :")
-        st.write(f"OPENAI_API_KEY: {'✅ Présent' if st.secrets.get('OPENAI_API_KEY') else '❌ Manquant'}")
-        st.write(f"SECRET_KEY: {'✅ Présent' if st.secrets.get('SECRET_KEY') else '❌ Manquant'}")
-        st.write(f"GOOGLE_CREDENTIALS: {'✅ Présent' if st.secrets.get('GOOGLE_CREDENTIALS') else '❌ Manquant'}")
-    except Exception as e:
-        st.write(f"❌ Erreur secrets: {e}")
+        if st.secrets.get('OPENAI_API_KEY'):
+            st.success("✅ Configuration détectée")
+        else:
+            st.warning("⚠️ Configuration en cours...")
+    except Exception:
+        pass
     
     # Initialisation
     try:
