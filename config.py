@@ -49,6 +49,27 @@ class Config:
     # Scopes Gmail
     SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
     
+    # Configuration OAuth - URI de redirection dynamique
+    @classmethod
+    def get_redirect_uri(cls):
+        """Détermine l'URI de redirection basé sur l'environnement"""
+        import os
+        
+        # Vérifier si on est en production (Streamlit Cloud)
+        if os.getenv('STREAMLIT_SERVER_BASE_URL_PATH'):
+            # En production, utiliser l'URL de l'application
+            base_url = os.getenv('STREAMLIT_SERVER_BASE_URL_PATH', '')
+            if base_url and 'streamlit.app' in base_url:
+                return base_url
+        
+        # Vérifier les variables d'environnement personnalisées
+        custom_redirect = os.getenv('OAUTH_REDIRECT_URI')
+        if custom_redirect:
+            return custom_redirect
+            
+        # Fallback pour le développement local
+        return "http://localhost:8501"
+    
     # Headers pour éviter les blocages
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
