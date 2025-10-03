@@ -8,8 +8,8 @@ import json
 
 # Configuration de la page
 st.set_page_config(
-    page_title="AutoBrief - Veille Automatisée",
-    page_icon="public/assets/favicon_autobrief.png",
+    page_title="AutoBrief - Veille IA Automatisée",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
