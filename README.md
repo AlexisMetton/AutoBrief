@@ -52,7 +52,6 @@ streamlit run streamlit_app.py
 
 ### **3. Configurer les secrets**
 ```toml
-[secrets]
 OPENAI_API_KEY = "sk-votre_cle_ici"
 SECRET_KEY = "votre_cle_secrete_32_caracteres"
 GOOGLE_CREDENTIALS = '{"type":"service_account","project_id":"votre-projet","private_key_id":"...","private_key":"...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}'
