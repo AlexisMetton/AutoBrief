@@ -17,7 +17,8 @@
 2. Cliquez sur "Sign in with GitHub"
 3. Cliquez sur "New app"
 4. Sélectionnez votre repository "AutoBrief"
-5. Cliquez sur "Deploy!"
+5. **Main file path** : `streamlit_app.py` (déjà configuré par défaut)
+6. Cliquez sur "Deploy!"
 
 ### **Étape 4 : Configurer vos clés** (1 minute)
 1. Dans l'onglet "Secrets", ajoutez :

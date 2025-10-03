@@ -39,7 +39,7 @@ cp env.example .env
 # Éditer .env avec vos clés API
 
 # Lancement
-streamlit run app.py
+streamlit run streamlit_app.py
 ```
 
 ## 🎯 **Démarrage Rapide**
