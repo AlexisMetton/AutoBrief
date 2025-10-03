@@ -51,23 +51,39 @@ st.markdown("""
 
 def main():
     # Debug des secrets (temporaire)
+    st.write("🔍 Debug des secrets Streamlit :")
+    
     try:
-        openai_key = st.secrets.get('OPENAI_API_KEY')
-        secret_key = st.secrets.get('SECRET_KEY')
-        google_creds = st.secrets.get('GOOGLE_CREDENTIALS')
-        
-        st.write("🔍 Debug des secrets :")
-        st.write(f"OPENAI_API_KEY: {'✅ Présent' if openai_key else '❌ Manquant'}")
-        st.write(f"SECRET_KEY: {'✅ Présent' if secret_key else '❌ Manquant'}")
-        st.write(f"GOOGLE_CREDENTIALS: {'✅ Présent' if google_creds else '❌ Manquant'}")
-        
-        if openai_key and secret_key:
-            st.success("✅ Configuration complète détectée")
+        # Vérifier si st.secrets existe
+        if hasattr(st, 'secrets'):
+            st.write("✅ st.secrets est disponible")
+            
+            # Afficher toutes les clés disponibles
+            try:
+                all_secrets = dict(st.secrets)
+                st.write(f"📋 Clés disponibles: {list(all_secrets.keys())}")
+            except Exception as e:
+                st.write(f"❌ Erreur lecture secrets: {e}")
+            
+            # Vérifier chaque secret individuellement
+            openai_key = st.secrets.get('OPENAI_API_KEY')
+            secret_key = st.secrets.get('SECRET_KEY')
+            google_creds = st.secrets.get('GOOGLE_CREDENTIALS')
+            
+            st.write(f"OPENAI_API_KEY: {'✅ Présent' if openai_key else '❌ Manquant'}")
+            st.write(f"SECRET_KEY: {'✅ Présent' if secret_key else '❌ Manquant'}")
+            st.write(f"GOOGLE_CREDENTIALS: {'✅ Présent' if google_creds else '❌ Manquant'}")
+            
+            if openai_key and secret_key:
+                st.success("✅ Configuration complète détectée")
+            else:
+                st.warning("⚠️ Configuration incomplète")
         else:
-            st.warning("⚠️ Configuration incomplète")
+            st.error("❌ st.secrets n'est pas disponible")
+            
     except Exception as e:
-        st.write(f"❌ Erreur secrets: {e}")
-        st.warning("⚠️ Secrets Streamlit non disponibles")
+        st.write(f"❌ Erreur générale: {e}")
+        st.warning("⚠️ Problème avec les secrets Streamlit")
     
     # Initialisation
     try:
@@ -84,7 +100,7 @@ def main():
     # En-tête principal
     st.markdown("""
     <div class="main-header">
-        <h1>🤖 AutoBrief</h1>
+        <h1>AutoBrief</h1>
         <p>Automatisez votre veille avec l'intelligence artificielle</p>
     </div>
     """, unsafe_allow_html=True)
