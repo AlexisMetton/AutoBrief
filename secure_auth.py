@@ -15,9 +15,6 @@ class SecureAuth:
         self.config = Config()
         self.encryption = self.config.get_encryption_key()
         
-    def get_redirect_uri(self):
-        """Détecte automatiquement l'URI de redirection basé sur l'environnement"""
-        return self.config.get_redirect_uri()
     
     def get_credentials_file(self):
         """Récupère le fichier credentials.json sécurisé"""
@@ -134,14 +131,11 @@ class SecureAuth:
                 if not credentials_file:
                     return False
                 
-                # Détecter automatiquement l'URI de redirection
-                redirect_uri = self.get_redirect_uri()
-                
-                # Créer le flow OAuth
+                # Utiliser le flux OAuth natif (plus fiable)
                 flow = Flow.from_client_secrets_file(
                     credentials_file,
                     scopes=self.config.SCOPES,
-                    redirect_uri=redirect_uri
+                    redirect_uri="urn:ietf:wg:oauth:2.0:oob"  # Flux natif
                 )
                 
                 # Obtenir l'URL d'autorisation
@@ -152,14 +146,15 @@ class SecureAuth:
                 
                 1. Cliquez sur le lien ci-dessous
                 2. Connectez-vous avec votre compte Google
-                3. Vous serez redirigé automatiquement vers cette page
+                3. Copiez le code d'autorisation affiché
+                4. Collez-le dans le champ ci-dessous
                 
                 [🔗 Se connecter avec Google]({auth_url})
                 """)
                 
-                # Vérifier si nous avons un code d'autorisation dans l'URL
-                query_params = st.query_params
-                auth_code = query_params.get('code', [None])[0]
+                # Champ pour le code d'autorisation
+                auth_code = st.text_input("Code d'autorisation:", type="password", 
+                                        help="Collez ici le code que vous avez reçu après la connexion")
                 
                 if auth_code:
                     try:
@@ -178,6 +173,12 @@ class SecureAuth:
                             
                     except Exception as e:
                         st.error(f"❌ Erreur d'authentification: {e}")
+                        st.write(f"🔍 Détails de l'erreur: {str(e)}")
+                        
+                        # Proposer de réessayer
+                        if st.button("🔄 Réessayer la connexion"):
+                            st.session_state.pop('authenticated', None)
+                            st.rerun()
                         
             except Exception as e:
                 st.error(f"❌ Erreur de configuration: {e}")

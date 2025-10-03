@@ -12,7 +12,7 @@ class Config:
     STREAMLIT_SERVER_PORT = int(os.getenv('STREAMLIT_SERVER_PORT', 8501))
     STREAMLIT_SERVER_ADDRESS = os.getenv('STREAMLIT_SERVER_ADDRESS', '0.0.0.0')
     
-    # Clés API - Priorité aux secrets Streamlit
+    # Clés API - Détection automatique de l'environnement
     @classmethod
     def get_openai_key(cls):
         """Récupère la clé OpenAI depuis les secrets ou l'environnement"""
@@ -49,26 +49,6 @@ class Config:
     # Scopes Gmail
     SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
     
-    # Configuration OAuth - URI de redirection dynamique
-    @classmethod
-    def get_redirect_uri(cls):
-        """Détermine l'URI de redirection basé sur l'environnement"""
-        import os
-        
-        # Vérifier si on est en production (Streamlit Cloud)
-        if os.getenv('STREAMLIT_SERVER_BASE_URL_PATH'):
-            # En production, utiliser l'URL de l'application
-            base_url = os.getenv('STREAMLIT_SERVER_BASE_URL_PATH', '')
-            if base_url and 'streamlit.app' in base_url:
-                return base_url
-        
-        # Vérifier les variables d'environnement personnalisées
-        custom_redirect = os.getenv('OAUTH_REDIRECT_URI')
-        if custom_redirect:
-            return custom_redirect
-            
-        # Fallback pour le développement local
-        return "http://localhost:8501"
     
     # Headers pour éviter les blocages
     HEADERS = {

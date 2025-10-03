@@ -111,7 +111,6 @@ STREAMLIT_SERVER_ADDRESS=0.0.0.0
 - **Erreur d'authentification** : Vérifiez `GOOGLE_CREDENTIALS` dans les secrets
 - **Clé OpenAI invalide** : Vérifiez votre clé dans les secrets
 - **Aucun email trouvé** : Vérifiez les adresses des newsletters
-- **Erreur 400 redirect_uri_mismatch** : Vérifiez les URLs de redirection dans Google Cloud Console
 
 ### Logs et débogage
 Les erreurs sont affichées dans l'interface. Pour plus de détails, consultez la console.

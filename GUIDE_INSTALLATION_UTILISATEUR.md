@@ -34,10 +34,10 @@
 2. Créez un projet
 3. Activez l'API Gmail
 4. Créez des identifiants OAuth2
-5. Téléchargez `credentials.json`
-6. **Copiez le contenu** du fichier
-7. **Ajoutez-le dans les secrets Streamlit** comme `GOOGLE_CREDENTIALS`
-8. **Supprimez** `credentials.json` de votre machine
+5. **Type d'application** : **Application de bureau**
+7. Téléchargez `credentials.json`
+8. **Copiez le contenu** du fichier
+9. **Ajoutez-le dans les secrets Streamlit** comme `GOOGLE_CREDENTIALS`
 
 ## 🎉 **C'est tout ! Votre AutoBrief est prêt !**
 
@@ -61,16 +61,9 @@
 4. Recherchez "Gmail API" → "Enable"
 5. "APIs & Services" → "Credentials"
 6. "Create Credentials" → "OAuth 2.0 Client IDs"
-7. "Application type" → "Web application"
-8. "Authorized redirect URIs" → `urn:ietf:wg:oauth:2.0:oob`
-9. Téléchargez le fichier JSON
-10. Renommez-le `credentials.json`
-
-### **Ajouter credentials.json à GitHub :**
-1. Dans votre repository GitHub
-2. Cliquez sur "Add file" → "Upload files"
-3. Glissez `credentials.json`
-4. Cliquez sur "Commit changes"
+7. **"Application type"** → **"Application de bureau"**
+8. Téléchargez le fichier JSON
+9. Renommez-le `credentials.json`
 
 ---
 
