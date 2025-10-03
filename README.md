@@ -69,10 +69,7 @@ GOOGLE_CREDENTIALS = '{"type":"service_account","project_id":"votre-projet","pri
 
 ### Fichiers sensibles (automatiquement ignorés) :
 - `.env` - Variables d'environnement
-- `token.json` - Tokens OAuth
 - `credentials.json` - Identifiants Google (stockés dans les secrets)
-- `output/` - Fichiers de sortie
-- `temp_credentials.json` - Fichier temporaire créé à la volée
 
 ## 📖 Utilisation
 
@@ -117,10 +114,6 @@ STREAMLIT_SERVER_ADDRESS=0.0.0.0
    RUN pip install -r requirements.txt
    CMD ["streamlit", "run", "app.py"]
    ```
-
-3. **Heroku/Railway** :
-   - Ajoutez un `Procfile` : `web: streamlit run app.py --server.port=$PORT`
-   - Configurez les variables d'environnement
 
 ## 🤝 Support
 
