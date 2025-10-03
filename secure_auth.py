@@ -125,9 +125,14 @@ class SecureAuth:
         # Bouton de connexion
         if st.button("🔑 Se connecter avec Google", type="primary"):
             try:
+                # Obtenir le fichier credentials (secrets Streamlit en priorité)
+                credentials_file = self.get_credentials_file()
+                if not credentials_file:
+                    return False
+                
                 # Créer le flow OAuth
                 flow = Flow.from_client_secrets_file(
-                    self.config.CREDENTIALS_PATH,
+                    credentials_file,
                     scopes=self.config.SCOPES,
                     redirect_uri="urn:ietf:wg:oauth:2.0:oob"
                 )
