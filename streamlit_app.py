@@ -52,24 +52,22 @@ st.markdown("""
 def main():
     # Debug des secrets (temporaire)
     try:
-        if hasattr(st, 'secrets') and st.secrets:
-            openai_key = st.secrets.get('OPENAI_API_KEY')
-            secret_key = st.secrets.get('SECRET_KEY')
-            google_creds = st.secrets.get('GOOGLE_CREDENTIALS')
-            
-            st.write("🔍 Debug des secrets :")
-            st.write(f"OPENAI_API_KEY: {'✅ Présent' if openai_key else '❌ Manquant'}")
-            st.write(f"SECRET_KEY: {'✅ Présent' if secret_key else '❌ Manquant'}")
-            st.write(f"GOOGLE_CREDENTIALS: {'✅ Présent' if google_creds else '❌ Manquant'}")
-            
-            if openai_key and secret_key:
-                st.success("✅ Configuration complète détectée")
-            else:
-                st.warning("⚠️ Configuration incomplète")
+        openai_key = st.secrets.get('OPENAI_API_KEY')
+        secret_key = st.secrets.get('SECRET_KEY')
+        google_creds = st.secrets.get('GOOGLE_CREDENTIALS')
+        
+        st.write("🔍 Debug des secrets :")
+        st.write(f"OPENAI_API_KEY: {'✅ Présent' if openai_key else '❌ Manquant'}")
+        st.write(f"SECRET_KEY: {'✅ Présent' if secret_key else '❌ Manquant'}")
+        st.write(f"GOOGLE_CREDENTIALS: {'✅ Présent' if google_creds else '❌ Manquant'}")
+        
+        if openai_key and secret_key:
+            st.success("✅ Configuration complète détectée")
         else:
-            st.warning("⚠️ Secrets Streamlit non disponibles")
+            st.warning("⚠️ Configuration incomplète")
     except Exception as e:
         st.write(f"❌ Erreur secrets: {e}")
+        st.warning("⚠️ Secrets Streamlit non disponibles")
     
     # Initialisation
     try:
