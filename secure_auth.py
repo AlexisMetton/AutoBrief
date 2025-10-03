@@ -17,6 +17,24 @@ class SecureAuth:
         
     def get_credentials_file(self):
         """Récupère le fichier credentials.json sécurisé"""
+        # Vérifier d'abord les secrets Streamlit (si disponibles)
+        try:
+            if 'GOOGLE_CREDENTIALS' in st.secrets:
+                try:
+                    # Créer un fichier temporaire depuis les secrets
+                    credentials_data = st.secrets['GOOGLE_CREDENTIALS']
+                    temp_file = 'temp_credentials.json'
+                    with open(temp_file, 'w') as f:
+                        f.write(credentials_data)
+                    return temp_file
+                except Exception as e:
+                    st.error(f"❌ Erreur lors de la lecture des credentials: {e}")
+                    return None
+        except Exception:
+            # Pas de secrets Streamlit disponibles, continuer avec le fallback
+            pass
+        
+        # Fallback vers le fichier local
         if not os.path.exists(self.config.CREDENTIALS_PATH):
             st.error("❌ Fichier credentials.json manquant. Veuillez le placer dans le répertoire du projet.")
             return None

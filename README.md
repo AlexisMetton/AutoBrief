@@ -1,4 +1,4 @@
-# 🤖 AutoBrief - Veille IA Automatisée
+# 🤖 AutoBrief - Veille Automatisée
 
 > **Automatisez votre veille en intelligence artificielle en analysant vos newsletters et en générant des résumés personnalisés.**
 
@@ -6,7 +6,7 @@
 
 - 🔐 **Authentification sécurisée** avec Google OAuth2
 - 📧 **Gestion des newsletters** - Ajoutez facilement vos sources
-- 🤖 **IA intégrée** - Extraction automatique des actualités IA
+- 🤖 **IA intégrée** - Extraction automatique des actualités
 - 🔒 **Sécurité maximale** - Chiffrement des données sensibles
 - 📱 **Interface intuitive** - Accessible à tous les utilisateurs
 - 📊 **Résumés personnalisés** - Contenu adapté à vos besoins
@@ -51,9 +51,11 @@ streamlit run streamlit_app.py
 [![Deploy](https://img.shields.io/badge/Deploy-Streamlit%20Cloud-green?style=for-the-badge&logo=streamlit)](https://share.streamlit.io)
 
 ### **3. Configurer les secrets**
-```
-OPENAI_API_KEY=sk-votre_cle_ici
-SECRET_KEY=votre_cle_secrete_32_caracteres
+```toml
+[secrets]
+OPENAI_API_KEY = "sk-votre_cle_ici"
+SECRET_KEY = "votre_cle_secrete_32_caracteres"
+GOOGLE_CREDENTIALS = '{"type":"service_account","project_id":"votre-projet","private_key_id":"...","private_key":"...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}'
 ```
 
 ## 🛡️ Sécurité
@@ -68,8 +70,9 @@ SECRET_KEY=votre_cle_secrete_32_caracteres
 ### Fichiers sensibles (automatiquement ignorés) :
 - `.env` - Variables d'environnement
 - `token.json` - Tokens OAuth
-- `credentials.json` - Identifiants Google
+- `credentials.json` - Identifiants Google (stockés dans les secrets)
 - `output/` - Fichiers de sortie
+- `temp_credentials.json` - Fichier temporaire créé à la volée
 
 ## 📖 Utilisation
 
@@ -122,9 +125,10 @@ STREAMLIT_SERVER_ADDRESS=0.0.0.0
 ## 🤝 Support
 
 ### Problèmes courants
-- **Erreur d'authentification** : Vérifiez `credentials.json`
-- **Clé OpenAI invalide** : Vérifiez votre clé dans `.env`
+- **Erreur d'authentification** : Vérifiez `GOOGLE_CREDENTIALS` dans les secrets
+- **Clé OpenAI invalide** : Vérifiez votre clé dans les secrets
 - **Aucun email trouvé** : Vérifiez les adresses des newsletters
+- **Erreur 400 redirect_uri_mismatch** : Vérifiez les URLs de redirection dans Google Cloud Console
 
 ### Logs et débogage
 Les erreurs sont affichées dans l'interface. Pour plus de détails, consultez la console.
@@ -143,4 +147,4 @@ pip install -r requirements.txt --upgrade
 
 ---
 
-**AutoBrief** - Automatisez votre veille IA en toute sécurité ! 🚀
+**AutoBrief** - Automatisez votre veille en toute sécurité ! 🚀

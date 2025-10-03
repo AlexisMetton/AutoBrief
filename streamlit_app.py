@@ -8,8 +8,8 @@ import json
 
 # Configuration de la page
 st.set_page_config(
-    page_title="AutoBrief - Veille IA Automatisée",
-    page_icon="🤖",
+    page_title="AutoBrief - Veille Automatisée",
+    page_icon="public/assets/favicon_autobrief.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -66,7 +66,7 @@ def main():
     st.markdown("""
     <div class="main-header">
         <h1>🤖 AutoBrief</h1>
-        <p>Automatisez votre veille IA avec l'intelligence artificielle</p>
+        <p>Automatisez votre veille avec l'intelligence artificielle</p>
     </div>
     """, unsafe_allow_html=True)
     

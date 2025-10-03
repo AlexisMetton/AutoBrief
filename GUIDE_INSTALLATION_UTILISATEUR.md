@@ -20,19 +20,25 @@
 5. **Main file path** : `streamlit_app.py` (déjà configuré par défaut)
 6. Cliquez sur "Deploy!"
 
-### **Étape 4 : Configurer vos clés** (1 minute)
-1. Dans l'onglet "Secrets", ajoutez :
-   - `OPENAI_API_KEY` = votre clé OpenAI
-   - `SECRET_KEY` = une clé secrète (32 caractères)
+### **Étape 4 : Configurer vos clés** (2 minutes)
+1. Dans l'onglet "Secrets", ajoutez au format TOML :
+   ```toml
+   [secrets]
+   OPENAI_API_KEY = "sk-votre_cle_openai_ici"
+   SECRET_KEY = "votre_cle_secrete_32_caracteres"
+   GOOGLE_CREDENTIALS = '{"type":"service_account","project_id":"votre-projet","private_key_id":"...","private_key":"...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}'
+   ```
 2. Cliquez sur "Save"
 
-### **Étape 5 : Configurer Google OAuth** (1 minute)
+### **Étape 5 : Configurer Google OAuth** (2 minutes)
 1. Allez sur [Google Cloud Console](https://console.cloud.google.com)
 2. Créez un projet
 3. Activez l'API Gmail
 4. Créez des identifiants OAuth2
 5. Téléchargez `credentials.json`
-6. Ajoutez-le à votre repository GitHub
+6. **Copiez le contenu** du fichier
+7. **Ajoutez-le dans les secrets Streamlit** comme `GOOGLE_CREDENTIALS`
+8. **Supprimez** `credentials.json` de votre machine
 
 ## 🎉 **C'est tout ! Votre AutoBrief est prêt !**
 
@@ -107,4 +113,4 @@ Une fois déployé :
 4. **Générez votre premier résumé** !
 5. **Recevez vos résumés automatiquement** par email
 
-**Votre veille IA est maintenant automatisée !** 🤖✨
+**Votre veille est maintenant automatisée !** 🤖✨

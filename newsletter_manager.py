@@ -14,7 +14,7 @@ class NewsletterManager:
     def __init__(self):
         self.config = Config()
         self.auth = SecureAuth()
-        self.client = OpenAI(api_key=self.config.OPENAI_API_KEY)
+        self.client = OpenAI(api_key=self.config.get_openai_key())
         
     def save_newsletters(self, newsletters):
         """Sauvegarde la liste des newsletters dans la session"""
