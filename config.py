@@ -18,20 +18,24 @@ class Config:
         """Récupère la clé OpenAI depuis les secrets ou l'environnement"""
         try:
             # Essayer d'accéder aux secrets Streamlit
-            return st.secrets['OPENAI_API_KEY']
+            if hasattr(st, 'secrets') and st.secrets:
+                return st.secrets.get('OPENAI_API_KEY')
         except Exception:
-            # Fallback vers les variables d'environnement
-            return os.getenv('OPENAI_API_KEY')
+            pass
+        # Fallback vers les variables d'environnement
+        return os.getenv('OPENAI_API_KEY')
     
     @classmethod
     def get_secret_key(cls):
         """Récupère la clé secrète depuis les secrets ou l'environnement"""
         try:
             # Essayer d'accéder aux secrets Streamlit
-            return st.secrets['SECRET_KEY']
+            if hasattr(st, 'secrets') and st.secrets:
+                return st.secrets.get('SECRET_KEY')
         except Exception:
-            # Fallback vers les variables d'environnement
-            return os.getenv('SECRET_KEY')
+            pass
+        # Fallback vers les variables d'environnement
+        return os.getenv('SECRET_KEY')
     
     @property
     def OPENAI_API_KEY(self):
@@ -70,9 +74,23 @@ class Config:
         """Valide que toutes les configurations nécessaires sont présentes"""
         missing = []
         
-        # Utiliser les méthodes get_* qui gèrent déjà le fallback
-        openai_key = cls.get_openai_key()
-        secret_key = cls.get_secret_key()
+        # Vérifier les secrets Streamlit d'abord
+        try:
+            if hasattr(st, 'secrets') and st.secrets:
+                openai_key = st.secrets.get('OPENAI_API_KEY')
+                secret_key = st.secrets.get('SECRET_KEY')
+            else:
+                openai_key = None
+                secret_key = None
+        except Exception:
+            openai_key = None
+            secret_key = None
+        
+        # Fallback vers les variables d'environnement
+        if not openai_key:
+            openai_key = os.getenv('OPENAI_API_KEY')
+        if not secret_key:
+            secret_key = os.getenv('SECRET_KEY')
         
         if not openai_key:
             missing.append("OPENAI_API_KEY")

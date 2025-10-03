@@ -106,15 +106,6 @@ STREAMLIT_SERVER_ADDRESS=0.0.0.0
    - Configurez les secrets dans l'interface
    - Déployez automatiquement
 
-2. **Docker** :
-   ```dockerfile
-   FROM python:3.9-slim
-   COPY . /app
-   WORKDIR /app
-   RUN pip install -r requirements.txt
-   CMD ["streamlit", "run", "app.py"]
-   ```
-
 ## 🤝 Support
 
 ### Problèmes courants
