@@ -329,7 +329,17 @@ class AutoBriefScheduler:
                         user_data = all_users_data[user_email]
                         # Vérifier si l'utilisateur a des credentials OAuth2 stockés
                         if 'oauth_credentials' in user_data:
-                            return user_data['oauth_credentials']
+                            oauth_creds = user_data['oauth_credentials']
+                            
+                            # Vérifier si les données sont chiffrées
+                            if oauth_creds.get('_encrypted', False) and '_encrypted_data' in oauth_creds:
+                                # Les données sont chiffrées, on ne peut pas les utiliser directement
+                                # Le scheduler doit utiliser les credentials via l'application Streamlit
+                                self.logger.warning(f"⚠️ Credentials chiffrés pour {user_email} - utilisation via Streamlit requise")
+                                return None
+                            else:
+                                # Ancien format non chiffré (pour compatibilité)
+                                return oauth_creds
                         else:
                             self.logger.warning(f"⚠️ Aucun token OAuth2 stocké pour {user_email}")
                             return None

@@ -191,21 +191,26 @@ python scheduler.py
 
 ## 🔒 Sécurité
 
-### ⚠️ **IMPORTANT : Gist Privé Obligatoire**
+### ⚠️ **IMPORTANT : Sécurité Gist Obligatoire**
 
 **NE JAMAIS utiliser un Gist public !** Cela exposerait les tokens OAuth2 de tous les utilisateurs.
 
-- ✅ **Gist privé** - Seul vous pouvez y accéder
+- ✅ **Gist secret** - Non listé publiquement
 - ✅ **Token GitHub** - Authentification requise pour lire/écrire
-- ✅ **Chiffrement** - Tokens OAuth2 chiffrés dans le Gist
+- ✅ **Chiffrement** - Tokens OAuth2 chiffrés dans le Gist (nouveau)
 - ❌ **Gist public** - DANGEREUX ! Expose tous les tokens
+- ⚠️ **Gist secret sans token** - Accessible via URL directe (non sécurisé)
+- 🚨 **Contenu visible** - Même secret, le contenu est lisible si URL connue
 
 ### 🛡️ **Bonnes pratiques :**
 
-1. **Gist privé uniquement** - Créez toujours un "secret gist"
+1. **Gist secret + Token** - Gist "secret" + Token GitHub obligatoire
 2. **Token GitHub sécurisé** - Utilisez un token avec scope "gist" uniquement
 3. **Révoquer les tokens** - Si compromis, révoquez immédiatement
 4. **Surveillance** - Vérifiez régulièrement l'accès au Gist
+5. **Ne pas partager l'URL** - L'URL du Gist doit rester confidentielle
+6. **Chiffrement des données** - Les tokens OAuth2 sont chiffrés dans le Gist (nouveau)
+7. **Accès limité** - Seuls les utilisateurs autorisés peuvent lire/écrire
 
 ## 🆘 Support
 

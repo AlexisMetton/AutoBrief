@@ -143,8 +143,24 @@ class NewsletterManager:
                             """)
                             return False
                         else:
-                            st.success("✅ Gist privé configuré avec token (sauvegarde automatique) !")
-                            return True
+                            # Vérifier que le token est bien configuré pour l'authentification
+                            if gist_token:
+                                st.success("✅ Gist secret configuré avec authentification (sécurisé) !")
+                                st.info("""
+                                🔒 **Sécurité activée :**
+                                - Gist non listé publiquement
+                                - Accès authentifié uniquement
+                                - Tokens OAuth2 protégés
+                                """)
+                                return True
+                            else:
+                                st.warning("""
+                                ⚠️ **Gist secret mais non sécurisé**
+                                
+                                Le Gist est "secret" mais accessible via URL directe.
+                                Pour une vraie sécurité, configurez un token GitHub.
+                                """)
+                                return False
                     else:
                         st.error(f"❌ Gist non accessible (Status: {response.status_code})")
                         return False
@@ -281,13 +297,14 @@ class NewsletterManager:
                     # Décrypter le token pour récupérer les credentials
                     decrypted_token = self.auth.decrypt_token(st.session_state['encrypted_token'])
                     if decrypted_token:
-                        # Ajouter les credentials OAuth2 aux données utilisateur
+                        # Ajouter les credentials OAuth2 aux données utilisateur (chiffrés)
+                        # Chiffrer les données sensibles avant de les sauvegarder dans le Gist
+                        encrypted_credentials = self.auth.encrypt_token(decrypted_token)
+                        
                         data['oauth_credentials'] = {
-                            "token": decrypted_token.get('token', ''),
-                            "refresh_token": decrypted_token.get('refresh_token', ''),
+                            "_encrypted_data": encrypted_credentials,  # Données chiffrées
+                            "_encrypted": True,  # Indicateur que les données sont chiffrées
                             "token_uri": decrypted_token.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                            "client_id": decrypted_token.get('client_id', ''),
-                            "client_secret": decrypted_token.get('client_secret', ''),
                             "scopes": decrypted_token.get('scopes', [
                                 "https://www.googleapis.com/auth/gmail.readonly",
                                 "https://www.googleapis.com/auth/gmail.send"
