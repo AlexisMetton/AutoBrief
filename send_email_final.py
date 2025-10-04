@@ -35,7 +35,7 @@ def send_email_final(to_email, subject, content):
         # Debug: afficher les champs disponibles
         logger.info(f"🔍 Champs disponibles dans credentials: {list(credentials_info.keys())}")
         
-        # Vérifier si c'est un fichier de credentials d'application ou d'utilisateur
+        # Vérifier le type de credentials
         if 'installed' in credentials_info:
             # Credentials d'application - on a besoin des credentials OAuth2 de l'utilisateur
             logger.error("❌ GOOGLE_CREDENTIALS contient les credentials d'application, pas les credentials OAuth2 de l'utilisateur")
@@ -43,31 +43,59 @@ def send_email_final(to_email, subject, content):
             logger.error("❌ Récupérez le fichier token.json après authentification dans l'application Streamlit")
             return False
         
-        # Créer le service Gmail avec les credentials OAuth2 de l'utilisateur
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
-        
-        # Créer les credentials OAuth2
-        credentials = Credentials(
-            token=credentials_info.get('token'),
-            refresh_token=credentials_info.get('refresh_token'),
-            token_uri=credentials_info.get('token_uri', 'https://oauth2.googleapis.com/token'),
-            client_id=credentials_info.get('client_id'),
-            client_secret=credentials_info.get('client_secret')
-        )
-        
-        # Rafraîchir le token si nécessaire
-        if credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
-        
-        service = build('gmail', 'v1', credentials=credentials)
+        elif 'type' in credentials_info and credentials_info['type'] == 'service_account':
+            # Service Account - utiliser les credentials de service
+            logger.info("✅ Service Account détecté - utilisation des credentials de service")
+            
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+            
+            # Créer les credentials de Service Account
+            credentials = service_account.Credentials.from_service_account_info(
+                credentials_info,
+                scopes=['https://www.googleapis.com/auth/gmail.send']
+            )
+            
+            service = build('gmail', 'v1', credentials=credentials)
+            
+        else:
+            # Credentials OAuth2 de l'utilisateur
+            logger.info("✅ Credentials OAuth2 de l'utilisateur détectés")
+            
+            from google.oauth2.credentials import Credentials
+            from google.auth.transport.requests import Request
+            from googleapiclient.discovery import build
+            
+            # Créer les credentials OAuth2
+            credentials = Credentials(
+                token=credentials_info.get('token'),
+                refresh_token=credentials_info.get('refresh_token'),
+                token_uri=credentials_info.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                client_id=credentials_info.get('client_id'),
+                client_secret=credentials_info.get('client_secret')
+            )
+            
+            # Rafraîchir le token si nécessaire
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(Request())
+            
+            service = build('gmail', 'v1', credentials=credentials)
         
         # Créer le message
         message = MIMEText(content, 'html')
         message['to'] = to_email
         message['subject'] = subject
-        message['from'] = credentials_info.get('email', 'noreply@autobrief.com')
+        
+        # Déterminer l'email expéditeur selon le type de credentials
+        if 'type' in credentials_info and credentials_info['type'] == 'service_account':
+            # Service Account - utiliser l'email du service account
+            sender_email = credentials_info.get('client_email', 'noreply@autobrief.com')
+        else:
+            # OAuth2 - utiliser l'email de l'utilisateur
+            sender_email = credentials_info.get('email', 'noreply@autobrief.com')
+        
+        message['from'] = sender_email
+        logger.info(f"📧 Email expéditeur: {sender_email}")
         
         # Encoder le message
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
