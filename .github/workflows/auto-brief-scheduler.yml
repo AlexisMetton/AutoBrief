@@ -30,6 +30,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        USER_DATA: ${{ secrets.USER_DATA }}
       run: |
         python scheduler.py
         

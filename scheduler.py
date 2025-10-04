@@ -34,17 +34,18 @@ class AutoBriefScheduler:
         self.logger = logging.getLogger(__name__)
         
     def get_all_users(self):
-        """Récupère tous les utilisateurs ayant des données sauvegardées"""
+        """Récupère tous les utilisateurs depuis les secrets GitHub"""
         users = []
-        global_data_file = os.path.join(self.data_dir, 'all_users_data.json')
-        
-        if not os.path.exists(global_data_file):
-            self.logger.info("Fichier de données global non trouvé")
-            return users
         
         try:
-            with open(global_data_file, 'r', encoding='utf-8') as f:
-                all_users_data = json.load(f)
+            # Charger les données depuis les secrets GitHub (variables d'environnement)
+            user_data_json = os.getenv('USER_DATA')
+            
+            if not user_data_json:
+                self.logger.info("Aucune donnée utilisateur trouvée dans les secrets GitHub")
+                return users
+            
+            all_users_data = json.loads(user_data_json)
             
             for user_email, user_data in all_users_data.items():
                 settings = user_data.get('settings', {})
@@ -53,13 +54,12 @@ class AutoBriefScheduler:
                 if settings.get('auto_send', False):
                     users.append({
                         'email': user_email,
-                        'file_path': global_data_file,
                         'settings': settings,
                         'newsletters': user_data.get('newsletters', [])
                     })
                     
         except Exception as e:
-            self.logger.error(f"Erreur lors du chargement des données globales: {e}")
+            self.logger.error(f"Erreur lors du chargement des données utilisateur: {e}")
         
         return users
     
