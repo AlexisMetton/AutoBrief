@@ -99,7 +99,7 @@ def main():
         # Navigation
         page = st.radio(
             "📋 Menu",
-            ["🏠 Accueil", "📧 Newsletters", "⚙️ Configuration", "📊 Résultats", "🤖 Scheduler", "❓ Aide"],
+            ["🏠 Accueil", "📧 Newsletters", "⚙️ Configuration", "📊 Résultats", "🤖 Scheduler", "🔌 API", "❓ Aide"],
             index=0
         )
     
@@ -114,6 +114,9 @@ def main():
         show_results_page(newsletter_manager)
     elif page == "🤖 Scheduler":
         show_scheduler_page(newsletter_manager)
+    elif page == "🔌 API":
+        st.info("🔌 Redirection vers la page API...")
+        st.markdown("### [Ouvrir la page API](/🔌%20API)")
     elif page == "❓ Aide":
         show_help_page()
 

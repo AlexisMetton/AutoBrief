@@ -158,21 +158,53 @@ class AutoBriefScheduler:
             return True  # En cas d'erreur, on autorise l'exécution
     
     def send_email(self, to_email, subject, content):
-        """Envoie un email via Gmail API"""
+        """Envoie un email via l'API Streamlit"""
         try:
-            # Pour l'instant, on simule l'envoi d'email car les credentials OAuth2
-            # ne sont pas disponibles dans GitHub Actions sans configuration complexe
-            self.logger.info(f"📧 Email simulé envoyé à {to_email}")
-            self.logger.info(f"📧 Sujet: {subject}")
-            self.logger.info(f"📧 Contenu: {content[:100]}...")
+            import requests
+            import urllib.parse
             
-            # Dans un déploiement réel, on utiliserait:
-            # 1. Un service account avec les permissions Gmail
-            # 2. Ou une API externe pour l'envoi d'emails
-            # 3. Ou on déclencherait l'application Streamlit pour envoyer l'email
+            # URL de votre application Streamlit
+            streamlit_url = "https://alexismetton.streamlit.app"
             
-            return True
+            # Récupérer la clé API depuis les secrets GitHub
+            api_key = os.getenv('API_KEY')
+            if not api_key:
+                self.logger.error("❌ API_KEY non trouvé dans les secrets GitHub")
+                return False
             
+            # Construire l'URL de l'API
+            api_url = f"{streamlit_url}/🔌%20API"
+            
+            # Paramètres de la requête
+            params = {
+                'action': 'send_email',
+                'api_key': api_key,
+                'user_email': to_email,
+                'subject': subject,
+                'content': content
+            }
+            
+            self.logger.info(f"📧 Envoi email via API Streamlit pour {to_email}")
+            self.logger.info(f"📧 URL: {api_url}")
+            
+            # Faire l'appel API
+            response = requests.get(api_url, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('status') == 200:
+                    self.logger.info(f"✅ Email envoyé avec succès à {to_email}")
+                    return True
+                else:
+                    self.logger.error(f"❌ Erreur API: {result.get('error', 'Erreur inconnue')}")
+                    return False
+            else:
+                self.logger.error(f"❌ Erreur HTTP {response.status_code}: {response.text}")
+                return False
+            
+        except requests.exceptions.Timeout:
+            self.logger.error("❌ Timeout lors de l'appel API")
+            return False
         except Exception as e:
             self.logger.error(f"❌ Erreur envoi email: {e}")
             return False

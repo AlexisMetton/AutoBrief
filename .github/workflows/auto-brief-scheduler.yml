@@ -32,6 +32,7 @@ jobs:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         GIST_ID: ${{ secrets.GIST_ID }}
         GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        API_KEY: ${{ secrets.API_KEY }}
       run: |
         python scheduler.py
         
