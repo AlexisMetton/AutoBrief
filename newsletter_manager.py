@@ -859,20 +859,13 @@ class NewsletterManager:
         # Créer la requête
         query = self.get_query_for_emails(newsletters, days)
         
-        # Debug logs
-        if not hasattr(st, 'spinner'):
-            print(f"🔧 Query Gmail: {query}")
-            print(f"🔧 Newsletters: {newsletters}")
-            print(f"🔧 Service Gmail: {service is not None}")
         
         # Récupérer les messages
         if hasattr(st, 'spinner'):
             with st.spinner("🔍 Recherche des emails..."):
                 messages = self.list_messages(service, query)
         else:
-            print("🔍 Recherche des emails...")
             messages = self.list_messages(service, query)
-            print(f"🔧 Messages trouvés: {len(messages) if messages else 0}")
         
         if not messages:
             if hasattr(st, 'warning'):
@@ -898,24 +891,15 @@ class NewsletterManager:
                 with st.spinner(f"📧 Traitement de l'email {idx + 1}/{len(messages)}..."):
                     message = self.get_message(service, msg['id'])
             else:
-                print(f"📧 Traitement de l'email {idx + 1}/{len(messages)}...")
                 message = self.get_message(service, msg['id'])
             
             if message:
                 body = self.get_message_body(message)
                 if body:
-                    print(f"🔧 Email {idx + 1}: Corps trouvé ({len(body)} caractères)")
                     summary = self.summarize_newsletter(body)
                     if summary and len(summary.strip()) > 0:
-                        print(f"🔧 Email {idx + 1}: Résumé généré ({len(summary)} caractères)")
                         summary = self.replace_redirected_links(summary)
                         output += f"**Source {idx + 1}:**\n{summary}\n\n"
-                    else:
-                        print(f"🔧 Email {idx + 1}: Résumé vide ou échec")
-                else:
-                    print(f"🔧 Email {idx + 1}: Corps vide")
-            else:
-                print(f"🔧 Email {idx + 1}: Message non récupéré")
             
             if progress_bar:
                 progress_bar.progress((idx + 1) / len(messages))
@@ -923,27 +907,13 @@ class NewsletterManager:
         # Mettre à jour la date de dernière exécution
         if output:
             self.update_last_run()
-            if not hasattr(st, 'spinner'):
-                print(f"🔧 Output généré: {len(output)} caractères")
-            else:
-                if not hasattr(st, 'spinner'):
-                    print("❌ Aucun output généré")
         
         # Envoyer par email seulement si demandé (génération automatique)
         if send_email:
             settings = self.get_user_settings()
             notification_email = settings.get('notification_email')
             if notification_email and notification_email.strip():
-                if not hasattr(st, 'spinner'):
-                    print(f"🔧 Envoi email à: {notification_email}")
-                    print(f"🔧 Contenu à envoyer: {len(output)} caractères")
                 self.send_summary_email(output, notification_email)
-            else:
-                if not hasattr(st, 'spinner'):
-                    print("❌ Aucun email de notification configuré")
-        else:
-            if not hasattr(st, 'spinner'):
-                print("🔧 Envoi email désactivé")
         
         return output
     

@@ -35,18 +35,9 @@ OPENAI_API_KEY = "sk-..."
 SECRET_KEY = "votre-clé-secrète-32-caractères"
 GIST_ID = "votre-gist-id"
 GIST_TOKEN = "ghp_..."
-GOOGLE_CREDENTIALS = {
-  "token": "...",
-  "refresh_token": "...",
-  "client_id": "...",
-  "client_secret": "...",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "scopes": [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send"
-  ]
-}
 ```
+
+**Note :** Les credentials Google OAuth2 sont maintenant automatiquement sauvegardés dans le Gist lors de la première connexion.
 
 ## 🔧 Configuration Google OAuth
 
@@ -61,15 +52,42 @@ GOOGLE_CREDENTIALS = {
 1. Allez dans **"APIs & Services" > "Credentials"**
 2. Cliquez sur **"Create Credentials" > "OAuth client ID"**
 3. Sélectionnez **"Desktop Application"**
+
 4. Téléchargez le fichier JSON et placez-le dans votre projet
+
+**Note :** Après la première connexion, vos tokens OAuth2 seront automatiquement sauvegardés dans le Gist pour l'automatisation.
 
 ### 3. Obtenir les Credentials OAuth2
 
 1. Lancez votre application Streamlit
 2. Connectez-vous avec Google
-3. Allez dans **"🤖 Scheduler"**
-4. Cliquez sur **"🔑 Afficher credentials OAuth2"**
-5. Copiez le contenu JSON dans le secret `GOOGLE_CREDENTIALS`
+
+## 🤖 Automatisation
+
+### GitHub Actions
+
+Le scheduler GitHub Actions s'exécute automatiquement toutes les heures et vérifie si un résumé doit être généré selon votre planning configuré.
+
+**✅ Fonctionnalités automatiques :**
+- **Authentification automatique** → Tokens OAuth2 sauvegardés dans le Gist
+- **Génération IA automatique** → Résumés créés sans intervention
+- **Envoi d'email automatique** → Notifications envoyées selon le planning
+- **Multi-utilisateurs** → Chaque utilisateur a ses propres credentials
+
+### Configuration du Planning
+
+Dans l'interface Streamlit, vous pouvez configurer :
+- **Fréquence** : Quotidien, Hebdomadaire, Mensuel
+- **Jour** : Pour les planifications hebdomadaires/mensuelles
+- **Heure** : Heure UTC d'exécution
+- **Email de notification** : Adresse pour recevoir les résumés
+
+### Activation de l'Automatisation
+
+1. Allez dans **"🤖 Scheduler"** de votre application Streamlit
+2. Configurez votre planning et votre email de notification
+3. Les credentials OAuth2 sont automatiquement sauvegardés lors de la première connexion
+4. GitHub Actions se charge du reste automatiquement
 
 ## 💾 Configuration GitHub Gist
 

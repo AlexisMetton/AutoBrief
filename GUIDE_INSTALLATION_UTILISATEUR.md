@@ -105,7 +105,11 @@ Dans votre application Streamlit déployée :
 ```
 OPENAI_API_KEY = "sk-..."
 SECRET_KEY = "votre-clé-secrète-32-caractères"
+GIST_ID = "votre-gist-id"
+GIST_TOKEN = "ghp_..."
 ```
+
+**Note :** Les credentials Google OAuth2 sont maintenant automatiquement sauvegardés dans le Gist lors de la première connexion.
 
 ## 📧 Étape 5 : Configuration Gmail
 
@@ -115,30 +119,32 @@ SECRET_KEY = "votre-clé-secrète-32-caractères"
 2. Autorisez l'accès à Gmail
 3. **Important** : Assurez-vous d'autoriser les permissions `gmail.readonly` et `gmail.send`
 
-### 5.2 Obtenir les Credentials OAuth2
+### 5.2 Authentification Automatique
 
-1. Allez dans **"🤖 Scheduler"**
-2. Cliquez sur **"🔑 Afficher credentials OAuth2 (pour GitHub Actions)"**
-3. Copiez le contenu JSON complet
-4. Ajoutez-le dans les secrets Streamlit :
+**✅ Nouveau :** Les credentials OAuth2 sont maintenant automatiquement sauvegardés dans le Gist lors de la première connexion. Plus besoin de les copier manuellement !
 
-```
-GOOGLE_CREDENTIALS = {
-  "token": "...",
-  "refresh_token": "...",
-  "client_id": "...",
-  "client_secret": "...",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "scopes": [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send"
-  ]
-}
-```
+## 🤖 Étape 6 : Activation de l'Automatisation
 
-## 💾 Étape 6 : Configuration GitHub Gist
+### 6.1 Configuration du Planning
 
-### 6.1 Créer un Gist Secret
+1. Dans votre application Streamlit, allez dans **"🤖 Scheduler"**
+2. Configurez votre planning :
+   - **Fréquence** : Quotidien, Hebdomadaire, ou Mensuel
+   - **Jour** : Pour les planifications hebdomadaires/mensuelles
+   - **Heure** : Heure UTC d'exécution
+   - **Email de notification** : Votre adresse email
+
+### 6.2 Fonctionnalités Automatiques
+
+**✅ Une fois configuré, tout est automatique :**
+- **Authentification** → Tokens OAuth2 sauvegardés automatiquement
+- **Génération IA** → Résumés créés sans intervention
+- **Envoi d'email** → Notifications envoyées selon le planning
+- **Multi-utilisateurs** → Chaque utilisateur a ses propres credentials
+
+## 💾 Étape 7 : Configuration GitHub Gist
+
+### 7.1 Créer un Gist Secret
 
 1. Allez sur [gist.github.com](https://gist.github.com)
 2. Créez un nouveau Gist **secret** (pas public !)

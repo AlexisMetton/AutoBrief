@@ -249,8 +249,6 @@ class AutoBriefScheduler:
                 # Désactiver la sauvegarde dans le scheduler
                 newsletter_manager._scheduler_mode = True
                 
-                self.logger.info(f"🔧 Données utilisateur passées au NewsletterManager")
-                
                 # Configurer l'accès Gmail pour le NewsletterManager
                 try:
                     from secure_auth import SecureAuth
@@ -263,28 +261,18 @@ class AutoBriefScheduler:
                         import json
                         credentials_json = json.dumps(user_credentials)
                         auth.set_external_credentials(credentials_json)
-                        self.logger.info(f"🔧 Credentials utilisateur configurés pour SecureAuth")
-                        self.logger.info(f"🔧 Credentials JSON: {credentials_json[:100]}...")
                     else:
                         self.logger.error(f"❌ Aucun token OAuth2 trouvé pour {user_info['email']} dans le Gist")
-                        self.logger.error(f"❌ L'utilisateur doit se connecter au moins une fois dans l'application")
                         return False
                     
                     # Configurer l'auth pour le NewsletterManager
                     newsletter_manager.auth = auth
-                    
-                    self.logger.info(f"🔧 Gmail auth configuré pour NewsletterManager")
                 except Exception as e:
                     self.logger.error(f"❌ Erreur configuration Gmail auth: {e}")
                     return False
                 
-                self.logger.info(f"🔧 NewsletterManager user_email: {newsletter_manager.user_email}")
-                self.logger.info(f"🔧 Newsletters configurées: {len(newsletter_manager.newsletters)}")
-                
-                # Générer le résumé réel avec l'IA et envoyer l'email directement
-                self.logger.info(f"🔧 Tentative de génération du résumé IA...")
+                # Générer le résumé avec l'IA et envoyer l'email
                 summary_result = newsletter_manager.process_newsletters(send_email=True)
-                self.logger.info(f"🔧 Résultat process_newsletters: {summary_result}")
                 
                 # Vérifier si le résultat est un succès (True ou chaîne non vide)
                 if summary_result is True or (isinstance(summary_result, str) and summary_result.strip()):
@@ -352,80 +340,28 @@ class AutoBriefScheduler:
                                         self.logger.error("❌ SECRET_KEY manquante pour déchiffrer les credentials")
                                         return None
                                     
-                                    self.logger.info(f"🔧 SECRET_KEY trouvée: {secret_key[:10]}...")
-                                    self.logger.info(f"🔧 SECRET_KEY complète: {secret_key}")
                                     
                                     # Générer la clé Fernet (même méthode que dans config.py)
                                     key = base64.urlsafe_b64encode(secret_key.encode()[:32].ljust(32, b'0'))
                                     fernet = Fernet(key)
                                     
-                                    # Test de l'algorithme avec des données de test
-                                    try:
-                                        test_data = {"test": "data"}
-                                        test_encrypted = fernet.encrypt(json.dumps(test_data).encode())
-                                        test_decrypted = fernet.decrypt(test_encrypted)
-                                        test_result = json.loads(test_decrypted.decode())
-                                        if test_result == test_data:
-                                            self.logger.info(f"✅ Test de chiffrement/déchiffrement réussi")
-                                        else:
-                                            self.logger.error(f"❌ Test de chiffrement/déchiffrement échoué")
-                                    except Exception as test_error:
-                                        self.logger.error(f"❌ Erreur test de chiffrement: {test_error}")
-                                    
                                     # Déchiffrer les credentials
                                     encrypted_data = oauth_creds['_encrypted_data']
-                                    self.logger.info(f"🔧 Tentative de déchiffrement des données...")
-                                    self.logger.info(f"🔧 Données chiffrées (premiers 50 caractères): {encrypted_data[:50]}...")
-                                    self.logger.info(f"🔧 Longueur des données chiffrées: {len(encrypted_data)}")
-                                    
-                                    # Vérifier si les données sont valides
-                                    if len(encrypted_data) < 100:
-                                        self.logger.error(f"❌ Données chiffrées trop courtes: {len(encrypted_data)} caractères")
-                                        return None
-                                    
-                                    # Vérifier le format base64
-                                    import re
-                                    if not re.match(r'^[A-Za-z0-9+/]*={0,2}$', encrypted_data):
-                                        self.logger.error(f"❌ Format base64 invalide")
-                                        return None
-                                    
-                                    # Vérifier le format des données chiffrées
-                                    try:
-                                        # Essayer de décoder base64 d'abord
-                                        import base64
-                                        decoded_data = base64.b64decode(encrypted_data)
-                                        self.logger.info(f"🔧 Données base64 décodées avec succès, longueur: {len(decoded_data)}")
-                                        
-                                        # Vérifier le format Fernet
-                                        self.logger.info(f"🔧 Premiers bytes décodés: {decoded_data[:20].hex()}")
-                                        
-                                    except Exception as base64_error:
-                                        self.logger.error(f"❌ Erreur décodage base64: {base64_error}")
-                                        return None
                                     
                                     # Essayer de déchiffrer avec différentes méthodes
                                     try:
                                         # Méthode 1: Direct
                                         decrypted_data = fernet.decrypt(encrypted_data.encode())
-                                        self.logger.info(f"🔧 Déchiffrement direct réussi, longueur: {len(decrypted_data)}")
-                                    except Exception as decrypt_error:
-                                        self.logger.error(f"❌ Erreur déchiffrement direct: {decrypt_error}")
-                                        
+                                    except Exception:
                                         # Méthode 2: Avec données pré-décodées
                                         try:
+                                            import base64
+                                            decoded_data = base64.b64decode(encrypted_data)
                                             decrypted_data = fernet.decrypt(decoded_data)
-                                            self.logger.info(f"🔧 Déchiffrement avec données pré-décodées réussi")
-                                        except Exception as decrypt_error2:
-                                            self.logger.error(f"❌ Erreur déchiffrement avec données pré-décodées: {decrypt_error2}")
+                                        except Exception:
                                             return None
                                     
                                     decrypted_creds = json.loads(decrypted_data.decode())
-                                    self.logger.info(f"🔧 JSON parsé avec succès")
-                                    
-                                    self.logger.info(f"✅ Credentials déchiffrés avec succès pour {user_email}")
-                                    self.logger.info(f"🔧 Token trouvé: {decrypted_creds.get('token', '')[:20]}...")
-                                    self.logger.info(f"🔧 Refresh token trouvé: {decrypted_creds.get('refresh_token', '')[:20]}...")
-                                    self.logger.info(f"🔧 Client ID trouvé: {decrypted_creds.get('client_id', '')[:20]}...")
                                     
                                     return decrypted_creds
                                     
