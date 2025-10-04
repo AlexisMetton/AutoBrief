@@ -273,10 +273,11 @@ class AutoBriefScheduler:
                 
                 # Générer le résumé réel avec l'IA et envoyer l'email directement
                 self.logger.info(f"🔧 Tentative de génération du résumé IA...")
-                summary_success = newsletter_manager.process_newsletters(send_email=True)
-                self.logger.info(f"🔧 Résultat process_newsletters: {summary_success}")
+                summary_result = newsletter_manager.process_newsletters(send_email=True)
+                self.logger.info(f"🔧 Résultat process_newsletters: {summary_result}")
                 
-                if summary_success:
+                # Vérifier si le résultat est un succès (True ou chaîne non vide)
+                if summary_result is True or (isinstance(summary_result, str) and summary_result.strip()):
                     self.logger.info(f"📄 Résumé IA généré et email envoyé avec succès pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
                     return True
                 else:
