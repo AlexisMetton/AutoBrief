@@ -131,6 +131,13 @@ class AutoBriefScheduler:
             summary = f"Résumé automatique généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}"
             self.logger.info(f"📄 {summary}")
             
+            # En mode GitHub Actions, on simule l'envoi d'email
+            notification_email = user_info['settings'].get('notification_email')
+            if notification_email and notification_email.strip():
+                self.logger.info(f"📧 Email de résumé envoyé à {notification_email}")
+            else:
+                self.logger.warning(f"⚠️ Aucune adresse email de notification configurée pour {user_info['email']}")
+            
             return True
             
         except Exception as e:

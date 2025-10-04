@@ -471,7 +471,7 @@ class NewsletterManager:
             st.error(f"❌ Erreur OpenAI: {e}")
             return ""
     
-    def process_newsletters(self, days=7):
+    def process_newsletters(self, days=7, send_email=False):
         """Traite toutes les newsletters et génère le résumé"""
         newsletters = self.get_newsletters()
         if not newsletters:
@@ -516,11 +516,12 @@ class NewsletterManager:
         if output:
             self.update_last_run()
             
-            # Envoyer par email si une adresse de notification est configurée
-            settings = self.get_user_settings()
-            notification_email = settings.get('notification_email')
-            if notification_email and notification_email.strip():
-                self.send_summary_email(output, notification_email)
+            # Envoyer par email seulement si demandé (génération automatique)
+            if send_email:
+                settings = self.get_user_settings()
+                notification_email = settings.get('notification_email')
+                if notification_email and notification_email.strip():
+                    self.send_summary_email(output, notification_email)
         
         return output
     
