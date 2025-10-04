@@ -66,7 +66,7 @@ class NewsletterManager:
                 return False
                 
         except Exception as e:
-            st.warning(f"⚠️ Erreur lors de la vérification du Gist: {e}")
+            pass
             return False
     
     def load_user_data(self):
@@ -101,7 +101,7 @@ class NewsletterManager:
                     return data
                     
         except Exception as e:
-            st.warning(f"⚠️ Erreur lors du chargement des données: {e}")
+            pass
         
         # Retourner des données par défaut
         default_data = {
@@ -165,6 +165,21 @@ class NewsletterManager:
                     # Retourner les données de cet utilisateur spécifique
                     if self.user_email in all_users_data:
                         return all_users_data[self.user_email]
+                    else:
+                        # Utilisateur pas encore dans le Gist - retourner des données par défaut
+                        return {
+                            'newsletters': [],
+                            'settings': {
+                                'frequency': 'weekly',
+                                'days_to_analyze': 7,
+                                'notification_email': '',
+                                'last_run': None,
+                                'auto_send': False,
+                                'schedule_day': 'monday',
+                                'schedule_time': '09:00',
+                                'schedule_timezone': 'UTC'
+                            }
+                        }
             return None
         except:
             return None
@@ -181,7 +196,7 @@ class NewsletterManager:
             if success:
                 st.success("✅ Données sauvegardées automatiquement !")
             else:
-                st.warning("⚠️ Sauvegarde locale uniquement (redémarrage effacera les données)")
+                pass
             
             return True
         except Exception as e:
@@ -199,7 +214,7 @@ class NewsletterManager:
             return self.save_to_local_file(data)
             
         except Exception as e:
-            st.warning(f"⚠️ Sauvegarde GitHub Gist échouée: {e}")
+            pass
             return False
     
     def save_to_github_gist(self, data):
@@ -449,7 +464,7 @@ class NewsletterManager:
                             st.success(f"✅ Newsletter {new_email} ajoutée")
                             st.rerun()
                         else:
-                            st.warning("⚠️ Cette newsletter est déjà dans la liste")
+                            pass
                     else:
                         st.error("❌ Veuillez entrer une adresse email valide")
         
@@ -466,32 +481,19 @@ class NewsletterManager:
                         self.remove_newsletter(email)
                         st.rerun()
         else:
-            st.info("ℹ️ Aucune newsletter configurée. Ajoutez-en une ci-dessus.")
+            pass
         
         # Configuration de la planification automatique
         st.markdown("---")
         st.markdown("### ⏰ Planification automatique")
         
-        st.info("""
-        💡 **Comment ça fonctionne :**
-        - GitHub Actions vérifie **toutes les heures** si un résumé doit être généré
-        - Vous pouvez choisir le **jour** (pour hebdomadaire/mensuel) et l'**heure** de votre choix
-        - L'heure est en **UTC** (GitHub Actions fonctionne en UTC)
-        - **Marge de 1 heure** : Le système accepte +/- 1 heure pour la flexibilité
-        """)
+        pass
         
         # Note sur la persistance
         st.markdown("---")
         st.markdown("### 💾 Persistance des données")
         
-        st.warning("""
-        ⚠️ **Important :** Sur Streamlit Cloud, les données sont sauvegardées dans les secrets.
-        
-        **Pour une persistance complète :**
-        1. Allez dans les **Settings** de votre app Streamlit Cloud
-        2. Ajoutez le secret `user_data` (voir guide)
-        3. Vos newsletters et paramètres seront sauvegardés
-        """)
+        pass
         
         settings = self.get_user_settings()
         
@@ -580,14 +582,9 @@ class NewsletterManager:
             else:
                 schedule_text = f"Tous les jours à {schedule_time.strftime('%H:%M')} UTC"
             
-            st.info(f"""
-            🔄 **Résumé automatique activé**
-            - 📅 Fréquence : {frequency_text}
-            - ⏰ Planifié : {schedule_text}
-            - 📊 Dernière exécution : {settings.get('last_run', 'Jamais')}
-            """)
+            pass
         else:
-            st.warning("⚠️ Résumé automatique désactivé")
+            pass
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
