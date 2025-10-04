@@ -13,12 +13,10 @@ import pickle
 
 class NewsletterManager:
     def __init__(self):
-        print(f"DEBUG: NewsletterManager.__init__ appelé")
         self.config = Config()
         self.auth = SecureAuth()
         self.client = OpenAI(api_key=self.config.get_openai_key())
         self.user_email = st.session_state.get('user_email', 'default_user')
-        print(f"DEBUG: NewsletterManager.__init__ - user_email: {self.user_email}")
         
         # Détecter automatiquement la reconnexion
         self._detect_reconnection()
@@ -32,11 +30,9 @@ class NewsletterManager:
             current_email = st.session_state.get('user_email', 'default_user')
             last_email = st.session_state.get('last_user_email', None)
             
-            print(f"DEBUG: _detect_reconnection - current_email: {current_email}, last_email: {last_email}")
             
             # Si l'email a changé, c'est une reconnexion
             if current_email != last_email and current_email != 'default_user':
-                print(f"DEBUG: Reconnexion détectée - rechargement automatique des données")
                 
                 # Vider le cache des données
                 if 'user_data_cache' in st.session_state:
@@ -50,38 +46,31 @@ class NewsletterManager:
             
             # Si pas d'email en session mais qu'on a un token valide, restaurer la session
             elif current_email == 'default_user' and 'encrypted_token' in st.session_state:
-                print(f"DEBUG: Session perdue détectée - tentative de restauration")
                 self._restore_session_from_token()
                 
         except Exception as e:
-            print(f"DEBUG: Erreur dans _detect_reconnection: {e}")
+            pass
     
     def _auto_reload_data(self):
         """Recharge automatiquement les données depuis le Gist"""
         try:
-            print(f"DEBUG: _auto_reload_data - rechargement automatique pour {self.user_email}")
-            
             # Forcer le rechargement depuis le Gist
             data = self.load_from_github_gist()
             if data:
-                print(f"DEBUG: _auto_reload_data - données rechargées: {data}")
                 # Mettre à jour la session avec les nouvelles données
                 st.session_state['user_data_cache'] = data
                 st.success("✅ Données automatiquement rechargées depuis le Gist !")
             else:
-                print(f"DEBUG: _auto_reload_data - aucune donnée trouvée dans le Gist")
-                
+                st.warning("⚠️ Aucune donnée trouvée dans le Gist")
         except Exception as e:
-            print(f"DEBUG: Erreur dans _auto_reload_data: {e}")
+            st.error(f"❌ Erreur lors du rechargement automatique: {e}")
     
     def _restore_session_from_token(self):
         """Restaure la session à partir du token chiffré"""
         try:
-            print(f"DEBUG: _restore_session_from_token - tentative de restauration")
             
             # Vérifier si le token est valide
             if self.auth.is_authenticated():
-                print(f"DEBUG: Token valide trouvé - restauration de la session")
                 
                 # Récupérer l'email depuis le token
                 credentials = self.auth.get_credentials()
@@ -93,15 +82,11 @@ class NewsletterManager:
                         st.session_state['authenticated'] = True
                         st.session_state['last_user_email'] = user_email
                         
-                        print(f"DEBUG: Session restaurée pour {user_email}")
                         st.success("✅ Session restaurée automatiquement !")
                         return True
             
-            print(f"DEBUG: Impossible de restaurer la session")
             return False
-            
         except Exception as e:
-            print(f"DEBUG: Erreur dans _restore_session_from_token: {e}")
             return False
     
     def check_gist_configuration(self):
@@ -156,23 +141,19 @@ class NewsletterManager:
     def load_user_data(self):
         """Charge les données utilisateur depuis le Gist uniquement"""
         try:
-            print(f"DEBUG: load_user_data appelé pour {self.user_email}")
             
             # Vérifier d'abord le cache en session
             if 'user_data_cache' in st.session_state:
                 cached_data = st.session_state['user_data_cache']
-                print(f"DEBUG: load_user_data - données trouvées dans le cache: {cached_data}")
                 return cached_data
             
             # Si pas de cache, charger depuis le Gist
             data = self.load_from_github_gist()
             if data:
-                print(f"DEBUG: load_user_data - données trouvées dans le Gist: {data}")
                 # Mettre en cache
                 st.session_state['user_data_cache'] = data
                 return data
             else:
-                print(f"DEBUG: load_user_data - aucune donnée trouvée, retour des données par défaut")
                 # Pas de données dans le Gist - retourner des données par défaut
                 default_data = {
                     'newsletters': [],
@@ -266,11 +247,8 @@ class NewsletterManager:
     def save_user_data(self, data):
         """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
-            print(f"DEBUG: save_user_data appelé avec data: {data}")
-            print(f"DEBUG: save_user_data - user_email: {self.user_email}")
             # Sauvegarder directement dans le Gist
             success = self.save_to_github_gist(data)
-            print(f"DEBUG: save_to_github_gist retourne: {success}")
             
             if success:
                 st.success("✅ Données sauvegardées automatiquement !")
@@ -328,7 +306,6 @@ class NewsletterManager:
                 else:
                     all_users_data = {}
             else:
-                print(f"DEBUG: Erreur lecture Gist - Status: {response.status_code}, Response: {response.text}")
                 return False
             
             # Ajouter/mettre à jour les données de cet utilisateur
@@ -358,16 +335,12 @@ class NewsletterManager:
                 gist_token = os.getenv('GIST_TOKEN')
             
             if gist_token:
-                print(f"DEBUG: Token trouvé - {gist_token[:10]}...")
-                print(f"DEBUG: Token complet - {gist_token}")
                 # Utiliser le token GitHub pour l'authentification
                 headers = {
                     'Accept': 'application/vnd.github.v3+json',
                     'Authorization': f'token {gist_token}'
                 }
-                print(f"DEBUG: Headers - {headers}")
             else:
-                print("DEBUG: Aucun token GIST_TOKEN trouvé")
                 st.error("❌ Token GIST_TOKEN manquant dans les secrets Streamlit")
                 return False
             
@@ -378,8 +351,6 @@ class NewsletterManager:
                     headers=headers
                 )
                 
-                print(f"DEBUG: Response status - {update_response.status_code}")
-                print(f"DEBUG: Response text - {update_response.text}")
                 
                 if update_response.status_code == 200:
                     st.success("✅ Données sauvegardées automatiquement dans le Gist !")
@@ -409,11 +380,9 @@ class NewsletterManager:
         
     def save_newsletters(self, newsletters):
         """Sauvegarde la liste des newsletters dans le Gist"""
-        print(f"DEBUG: save_newsletters appelé avec newsletters: {newsletters}")
         # Mettre à jour les données utilisateur complètes
         user_data = self.load_user_data()
         user_data['newsletters'] = newsletters
-        print(f"DEBUG: save_newsletters - user_data: {user_data}")
         self.save_user_data(user_data)
         
     def get_newsletters(self):
@@ -435,10 +404,8 @@ class NewsletterManager:
     
     def save_user_settings(self, settings):
         """Sauvegarde les paramètres utilisateur"""
-        print(f"DEBUG: save_user_settings appelé avec settings: {settings}")
         user_data = self.load_user_data()
         user_data['settings'] = settings
-        print(f"DEBUG: save_user_settings - user_data: {user_data}")
         return self.save_user_data(user_data)
     
     def should_run_automatically(self):
@@ -484,10 +451,7 @@ class NewsletterManager:
             # Vérifier le jour (pour les fréquences weekly/monthly)
             if settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
                 if current_day != schedule_day.lower():
-                    print(f"DEBUG: Jour incorrect - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
                     return False
-                else:
-                    print(f"DEBUG: Jour correct - {current_day}")
             
             # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
             target_hour = int(schedule_time.split(':')[0])
@@ -497,7 +461,6 @@ class NewsletterManager:
             
             # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
             time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
-            print(f"DEBUG: Heure - Actuelle: {current_hour}:{current_minute:02d}, Cible: {target_hour}:{target_minute:02d}, Diff: {time_diff}min")
             return time_diff <= 30
             
         except Exception as e:

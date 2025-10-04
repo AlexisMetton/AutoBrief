@@ -1,144 +1,203 @@
-# AutoBrief - Veille Automatisée 🤖
+# 📧 AutoBrief - Résumé Automatique de Newsletters
 
-> **Automatisez votre veille en intelligence artificielle en analysant vos newsletters et en générant des résumés personnalisés.**
-
-[![Deploy on Streamlit Cloud](https://img.shields.io/badge/Deploy-Streamlit%20Cloud-blue?style=for-the-badge&logo=streamlit)](https://share.streamlit.io)
-[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-green?style=for-the-badge&logo=github)](https://github.com/features/actions)
+AutoBrief est une application Streamlit qui génère automatiquement des résumés intelligents de vos newsletters Gmail grâce à l'IA, avec planification automatique via GitHub Actions.
 
 ## ✨ Fonctionnalités
 
-- 🔐 **Authentification sécurisée** avec Google OAuth2
-- 📧 **Gestion des newsletters** - Ajoutez facilement vos sources
-- 🤖 **IA intégrée** - Extraction automatique des actualités IA
-- 🔒 **Sécurité maximale** - Chiffrement des données sensibles
-- 📱 **Interface intuitive** - Accessible à tous les utilisateurs
-- ⏰ **Automatisation complète** - Résumés générés automatiquement
-- 🚀 **100% Gratuit** - Streamlit Cloud + GitHub Actions
+- 🔐 **Authentification Google** - Connexion sécurisée avec votre compte Gmail
+- 📧 **Analyse IA** - Résumé intelligent de vos newsletters avec OpenAI
+- ⏰ **Planification automatique** - Envoi automatique selon votre planning
+- 💾 **Persistance des données** - Sauvegarde automatique dans GitHub Gist
+- 🚀 **Déploiement Streamlit Cloud** - Application hébergée gratuitement
+- 🤖 **Automatisation GitHub Actions** - Planification et exécution automatiques
 
-## 🚀 Installation Ultra-Simple (5 minutes)
+## 🚀 Installation Rapide
 
-### **1. Fork le projet**
-[![Fork](https://img.shields.io/badge/Fork-AutoBrief-blue?style=for-the-badge&logo=github)](https://github.com/votre-repo/AutoBrief/fork)
+### 1. Fork du Repository
 
-### **2. Déployer sur Streamlit Cloud**
+1. Cliquez sur **"Fork"** en haut à droite de ce repository
+2. Votre fork sera disponible à `https://github.com/VOTRE-USERNAME/AutoBrief`
+
+### 2. Déploiement Streamlit Cloud
+
 1. Allez sur [share.streamlit.io](https://share.streamlit.io)
-2. Connectez votre repository GitHub
-3. Cliquez sur "Deploy"
-4. **C'est tout !** Votre application est en ligne
+2. Connectez-vous avec votre compte GitHub
+3. Cliquez sur **"New app"**
+4. Sélectionnez votre repository `AutoBrief`
+5. Cliquez sur **"Deploy!"**
 
-### **3. Configurer l'automatisation (optionnel)**
-1. Dans votre repository forké, allez dans **Settings > Secrets**
-2. Ajoutez vos clés API (voir guide ci-dessous)
-3. **GitHub Actions** se lance automatiquement tous les jours à 09:00 UTC
+### 3. Configuration des Secrets
 
-📖 **Guide complet** : [GUIDE_INSTALLATION_UTILISATEUR.md](GUIDE_INSTALLATION_UTILISATEUR.md)
+Dans Streamlit Cloud, ajoutez ces secrets :
 
-### **Option 2 : Installation locale**
-```bash
-# Cloner le projet
-git clone <votre-repo>
-cd AutoBrief
-
-# Créer l'environnement virtuel
-python -m venv venv
-source venv/Scripts/activate  # Windows: venv\Scripts\activate
-
-# Installer les dépendances
-pip install -r requirements.txt
-
-# Configuration
-cp env.example .env
-# Éditer .env avec vos clés API
-
-# Lancement
-streamlit run streamlit_app.py
+```
+OPENAI_API_KEY = "sk-..."
+SECRET_KEY = "votre-clé-secrète-32-caractères"
+GIST_ID = "votre-gist-id"
+GIST_TOKEN = "ghp_..."
+GOOGLE_CREDENTIALS = {
+  "token": "...",
+  "refresh_token": "...",
+  "client_id": "...",
+  "client_secret": "...",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "scopes": [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send"
+  ]
+}
 ```
 
-## 🎯 **Démarrage Rapide**
+## 🔧 Configuration Google OAuth
 
-### **1. Fork le projet**
-[![Fork](https://img.shields.io/badge/Fork-AutoBrief-blue?style=for-the-badge&logo=github)](https://github.com/votre-repo/AutoBrief/fork)
+### 1. Créer un Projet Google Cloud
 
-### **2. Déployer sur Streamlit**
-[![Deploy](https://img.shields.io/badge/Deploy-Streamlit%20Cloud-green?style=for-the-badge&logo=streamlit)](https://share.streamlit.io)
+1. Allez sur [Google Cloud Console](https://console.cloud.google.com)
+2. Créez un nouveau projet ou sélectionnez un projet existant
+3. Activez l'**API Gmail**
 
-### **3. Configurer les secrets**
-```toml
-OPENAI_API_KEY = "sk-votre_cle_ici"
-SECRET_KEY = "votre_cle_secrete_32_caracteres"
-GOOGLE_CREDENTIALS = '{"type":"service_account","project_id":"votre-projet","private_key_id":"...","private_key":"...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}'
+### 2. Configurer OAuth
+
+1. Allez dans **"APIs & Services" > "Credentials"**
+2. Cliquez sur **"Create Credentials" > "OAuth client ID"**
+3. Sélectionnez **"Desktop Application"**
+4. Téléchargez le fichier JSON et placez-le dans votre projet
+
+### 3. Obtenir les Credentials OAuth2
+
+1. Lancez votre application Streamlit
+2. Connectez-vous avec Google
+3. Allez dans **"🤖 Scheduler"**
+4. Cliquez sur **"🔑 Afficher credentials OAuth2"**
+5. Copiez le contenu JSON dans le secret `GOOGLE_CREDENTIALS`
+
+## 💾 Configuration GitHub Gist
+
+### 1. Créer un Gist Public
+
+1. Allez sur [gist.github.com](https://gist.github.com)
+2. Créez un nouveau Gist public
+3. Nommez le fichier `user_data.json`
+4. Ajoutez ce contenu :
+```json
+{}
+```
+5. Copiez l'ID du Gist (dans l'URL)
+
+### 2. Créer un Token GitHub
+
+1. Allez dans **GitHub > Settings > Developer settings > Personal access tokens**
+2. Cliquez sur **"Generate new token (classic)"**
+3. Sélectionnez la scope **"gist"**
+4. Copiez le token
+
+### 3. Configurer les Secrets
+
+Ajoutez ces secrets dans Streamlit Cloud :
+- `GIST_ID` : L'ID de votre Gist
+- `GIST_TOKEN` : Votre token GitHub
+
+## 🤖 Configuration GitHub Actions
+
+### 1. Activer GitHub Actions
+
+1. Allez dans votre repository GitHub
+2. Cliquez sur l'onglet **"Actions"**
+3. Activez GitHub Actions si ce n'est pas déjà fait
+
+### 2. Configurer les Secrets GitHub
+
+Dans **Settings > Secrets and variables > Actions**, ajoutez :
+
+```
+OPENAI_API_KEY = "sk-..."
+SECRET_KEY = "votre-clé-secrète"
+GOOGLE_CREDENTIALS = "contenu-json-des-credentials"
+GIST_ID = "votre-gist-id"
+GIST_TOKEN = "ghp_..."
+API_KEY = "clé-api-aléatoire"
 ```
 
-## 🛡️ Sécurité
+### 3. Planification
 
-### Mesures de sécurité intégrées :
-- ✅ **Chiffrement des tokens** - Tous les tokens sont chiffrés
-- ✅ **Variables d'environnement** - Aucune clé en dur
-- ✅ **Sessions sécurisées** - Gestion des sessions chiffrées
-- ✅ **Permissions limitées** - Accès lecture seule Gmail
-- ✅ **Validation des entrées** - Protection contre les injections
-
-### Fichiers sensibles (automatiquement ignorés) :
-- `.env` - Variables d'environnement
-- `credentials.json` - Identifiants Google (stockés dans les secrets)
+Le scheduler s'exécute automatiquement toutes les heures et vérifie votre planification configurée dans l'application.
 
 ## 📖 Utilisation
 
-### Interface utilisateur
-1. **Accueil** - Vue d'ensemble et actions rapides
-2. **Newsletters** - Gestion de vos sources d'information
-3. **Configuration** - Paramètres et tests
-4. **Résultats** - Historique et téléchargement
-5. **Aide** - Documentation et support
+### 1. Configuration des Newsletters
 
-### Workflow typique
-1. Connectez-vous avec votre compte Google
-2. Ajoutez les adresses email de vos newsletters
-3. Configurez la période d'analyse
-4. Générez votre résumé automatiquement
-5. Téléchargez ou consultez les résultats
+1. Connectez-vous à votre application Streamlit
+2. Allez dans **"📧 Newsletters"**
+3. Ajoutez les adresses email des newsletters à suivre
+4. Configurez les paramètres (fréquence, jours d'analyse, etc.)
 
-## 🔧 Configuration requise
+### 2. Planification
 
-### Variables d'environnement
-```env
-# Obligatoires
-OPENAI_API_KEY=sk-...
-SECRET_KEY=...
+1. Allez dans **"🤖 Scheduler"**
+2. Activez l'**envoi automatique**
+3. Configurez le jour et l'heure d'envoi
+4. Laissez GitHub Actions gérer le reste !
 
-# Optionnelles
-STREAMLIT_SERVER_PORT=8501
-STREAMLIT_SERVER_ADDRESS=0.0.0.0
+### 3. Test
+
+Utilisez le bouton **"🧪 Tester la newsletter"** pour générer un résumé immédiatement.
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Streamlit     │    │   GitHub Actions │    │   GitHub Gist   │
+│   Application   │◄──►│   Scheduler      │◄──►│   Persistence   │
+│                 │    │                  │    │                 │
+│ • Interface     │    │ • Planification  │    │ • Données       │
+│ • Configuration │    │ • Génération IA  │    │ • Utilisateurs  │
+│ • Authentification│   │ • Envoi emails  │    │ • Settings      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-### Déploiement en production
-1. **Streamlit Cloud** (gratuit) :
-   - Connectez votre repo GitHub
-   - Configurez les secrets dans l'interface
-   - Déployez automatiquement
+## 🔧 Développement Local
 
-## 🤝 Support
+### Installation
 
-### Problèmes courants
-- **Erreur d'authentification** : Vérifiez `GOOGLE_CREDENTIALS` dans les secrets
-- **Clé OpenAI invalide** : Vérifiez votre clé dans les secrets
-- **Aucun email trouvé** : Vérifiez les adresses des newsletters
+```bash
+git clone https://github.com/VOTRE-USERNAME/AutoBrief.git
+cd AutoBrief
+pip install -r requirements.txt
+```
 
-### Logs et débogage
-Les erreurs sont affichées dans l'interface. Pour plus de détails, consultez la console.
+### Configuration
+
+1. Copiez `env.example` vers `.env`
+2. Remplissez vos clés API
+3. Lancez avec `streamlit run streamlit_app.py`
+
+### Test du Scheduler
+
+```bash
+python scheduler.py
+```
+
+## 📋 Secrets Requis
+
+| Secret | Description | Où l'obtenir |
+|--------|-------------|--------------|
+| `OPENAI_API_KEY` | Clé API OpenAI | [platform.openai.com](https://platform.openai.com) |
+| `SECRET_KEY` | Clé de chiffrement | Générateur dans l'app |
+| `GIST_ID` | ID du Gist GitHub | [gist.github.com](https://gist.github.com) |
+| `GIST_TOKEN` | Token GitHub | GitHub Settings > Developer settings |
+| `GOOGLE_CREDENTIALS` | Credentials OAuth2 | Via l'application Streamlit |
+| `API_KEY` | Clé API pour GitHub Actions | Clé aléatoire |
+
+## 🆘 Support
+
+- 📖 **Documentation complète** : [GUIDE_INSTALLATION_UTILISATEUR.md](GUIDE_INSTALLATION_UTILISATEUR.md)
+- 🔑 **Génération de clé** : [SECRET_KEY_GENERATOR.md](SECRET_KEY_GENERATOR.md)
+- 🐛 **Issues** : [GitHub Issues](https://github.com/VOTRE-USERNAME/AutoBrief/issues)
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
-
-## 🔄 Mises à jour
-
-Pour mettre à jour AutoBrief :
-```bash
-git pull origin main
-pip install -r requirements.txt --upgrade
-```
+MIT License - Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ---
 
-**AutoBrief** - Automatisez votre veille en toute sécurité ! 🚀
+**🎉 Félicitations ! Votre AutoBrief est maintenant opérationnel !**
