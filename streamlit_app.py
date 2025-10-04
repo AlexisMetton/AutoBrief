@@ -158,16 +158,17 @@ def show_home_page(newsletter_manager):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("🔄 Générer le résumé maintenant", type="primary", use_container_width=True):
+        if st.button("🧪 Tester la newsletter", type="primary", use_container_width=True):
             if not newsletter_manager.get_newsletters():
                 st.error("❌ Aucune newsletter configurée. Allez dans l'onglet 'Newsletters' pour en ajouter.")
             else:
-                with st.spinner("🔄 Génération du résumé en cours..."):
-                    result = newsletter_manager.process_newsletters()
+                with st.spinner("🧪 Test de la newsletter en cours..."):
+                    # Générer le résumé
+                    result = newsletter_manager.process_newsletters(send_email=True)
                     if result:
                         st.session_state['last_summary'] = result
                         st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                        st.success("✅ Résumé généré avec succès !")
+                        st.success("✅ Test de newsletter réussi ! Résumé généré et email envoyé.")
                         st.rerun()
                     else:
                         st.error("❌ Aucun contenu trouvé pour la période sélectionnée")
@@ -456,7 +457,7 @@ def show_help_page():
     - Configurez la période d'analyse
     
     **3. Génération du résumé:**
-    - Cliquez sur "🔄 Générer le résumé maintenant"
+    - Cliquez sur "🧪 Tester la newsletter"
     - Le système analysera vos emails et extraira les actualités IA
     - Le résumé sera disponible dans l'onglet "📊 Résultats"
     
