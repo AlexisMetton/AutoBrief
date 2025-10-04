@@ -32,8 +32,11 @@ class NewsletterManager:
                 return st.session_state['user_data_cache']
             
             # 2. Essayer les secrets Streamlit (pour Streamlit Cloud)
-            if hasattr(st, 'secrets') and 'user_data' in st.secrets:
-                return st.secrets['user_data']
+            try:
+                if hasattr(st, 'secrets') and 'user_data' in st.secrets:
+                    return st.secrets['user_data']
+            except:
+                pass  # Ignorer les erreurs de secrets
             
             # 3. Fallback sur le fichier local (pour développement local)
             if os.path.exists(self.user_data_file):
@@ -42,7 +45,8 @@ class NewsletterManager:
         except Exception as e:
             st.warning(f"⚠️ Erreur lors du chargement des données: {e}")
         
-        return {
+        # Retourner des données par défaut et les initialiser dans la session
+        default_data = {
             'newsletters': [],
             'settings': {
                 'frequency': 'weekly',
@@ -55,20 +59,26 @@ class NewsletterManager:
                 'schedule_timezone': 'UTC'  # Fuseau horaire
             }
         }
+        
+        # Initialiser dans la session state
+        st.session_state['user_data_cache'] = default_data
+        return default_data
     
     def save_user_data(self, data):
-        """Sauvegarde les données utilisateur dans les secrets Streamlit ou le fichier"""
+        """Sauvegarde les données utilisateur dans la session state et le fichier"""
         try:
-            # Essayer d'abord les secrets Streamlit (pour Streamlit Cloud)
-            if hasattr(st, 'secrets') and 'user_data' in st.secrets:
-                # Sur Streamlit Cloud, on ne peut pas modifier les secrets à la volée
-                # On va utiliser la session state comme cache temporaire
-                st.session_state['user_data_cache'] = data
-                return True
+            # Toujours sauvegarder dans la session state pour la persistance
+            st.session_state['user_data_cache'] = data
             
-            # Fallback sur le fichier local (pour développement local)
-            with open(self.user_data_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            # Essayer de sauvegarder sur disque si possible (développement local)
+            try:
+                with open(self.user_data_file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+            except Exception as disk_error:
+                # Sur Streamlit Cloud, on ne peut pas écrire sur disque
+                # C'est normal, on continue avec la session state seulement
+                pass
+            
             return True
         except Exception as e:
             st.error(f"❌ Erreur lors de la sauvegarde: {e}")
@@ -78,23 +88,19 @@ class NewsletterManager:
         """Sauvegarde la liste des newsletters dans la session ET sur disque"""
         st.session_state['newsletters'] = newsletters
         
-        # Sauvegarder aussi sur disque
+        # Mettre à jour aussi les données utilisateur complètes
         user_data = self.load_user_data()
         user_data['newsletters'] = newsletters
         self.save_user_data(user_data)
         
     def get_newsletters(self):
-        """Récupère la liste des newsletters depuis la session ou le disque"""
-        # Essayer d'abord la session
-        newsletters = st.session_state.get('newsletters', [])
+        """Récupère la liste des newsletters depuis la session ou les données utilisateur"""
+        # Charger les données utilisateur complètes (qui incluent les newsletters)
+        user_data = self.load_user_data()
+        newsletters = user_data.get('newsletters', [])
         
-        # Si vide, charger depuis le disque
-        if not newsletters:
-            user_data = self.load_user_data()
-            newsletters = user_data.get('newsletters', [])
-            # Mettre à jour la session
-            if newsletters:
-                st.session_state['newsletters'] = newsletters
+        # Mettre en session pour la performance
+        st.session_state['newsletters'] = newsletters
         
         return newsletters
     
@@ -511,7 +517,7 @@ class NewsletterManager:
             from email import encoders
             
             # Configuration Gmail (utilise les mêmes credentials OAuth2)
-            service = self.get_gmail_service()
+            service = self.auth.get_gmail_service()
             if not service:
                 st.error("❌ Impossible d'accéder à Gmail pour l'envoi")
                 return False
