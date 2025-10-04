@@ -165,6 +165,7 @@ class NewsletterManager:
         """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
             print(f"DEBUG: save_user_data appelé avec data: {data}")
+            print(f"DEBUG: save_user_data - user_email: {self.user_email}")
             # Sauvegarder directement dans le Gist
             success = self.save_to_github_gist(data)
             print(f"DEBUG: save_to_github_gist retourne: {success}")
