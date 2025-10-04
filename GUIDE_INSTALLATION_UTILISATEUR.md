@@ -138,16 +138,16 @@ GOOGLE_CREDENTIALS = {
 
 ## 💾 Étape 6 : Configuration GitHub Gist
 
-### 6.1 Créer un Gist Public
+### 6.1 Créer un Gist Privé
 
 1. Allez sur [gist.github.com](https://gist.github.com)
-2. Créez un nouveau Gist **public**
+2. Créez un nouveau Gist **privé** (pas public !)
 3. **Filename** : `user_data.json`
 4. **Content** :
 ```json
 {}
 ```
-5. Cliquez sur **"Create public gist"**
+5. Cliquez sur **"Create secret gist"**
 6. Copiez l'ID du Gist (dans l'URL : `gist.github.com/VOTRE-USERNAME/ID-DU-GIST`)
 
 ### 6.2 Créer un Token GitHub

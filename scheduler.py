@@ -253,13 +253,15 @@ class AutoBriefScheduler:
                     from secure_auth import SecureAuth
                     auth = SecureAuth()
                     
-                    # Passer les credentials Google depuis GitHub Actions
-                    google_credentials = os.getenv('GOOGLE_CREDENTIALS')
-                    if google_credentials:
-                        auth.set_external_credentials(google_credentials)
-                        self.logger.info(f"🔧 Credentials Google configurés pour SecureAuth")
+                    # Récupérer les credentials de l'utilisateur depuis le Gist
+                    user_credentials = self.get_user_credentials_from_gist(user_info['email'])
+                    if user_credentials:
+                        auth.set_external_credentials(user_credentials)
+                        self.logger.info(f"🔧 Credentials utilisateur configurés pour SecureAuth")
                     else:
-                        self.logger.error(f"❌ GOOGLE_CREDENTIALS non trouvé dans les variables d'environnement")
+                        self.logger.error(f"❌ Aucun token OAuth2 trouvé pour {user_info['email']} dans le Gist")
+                        self.logger.error(f"❌ L'utilisateur doit se connecter au moins une fois dans l'application")
+                        return False
                     
                     # Configurer l'auth pour le NewsletterManager
                     newsletter_manager.auth = auth
@@ -267,6 +269,7 @@ class AutoBriefScheduler:
                     self.logger.info(f"🔧 Gmail auth configuré pour NewsletterManager")
                 except Exception as e:
                     self.logger.error(f"❌ Erreur configuration Gmail auth: {e}")
+                    return False
                 
                 self.logger.info(f"🔧 NewsletterManager user_email: {newsletter_manager.user_email}")
                 self.logger.info(f"🔧 Newsletters configurées: {len(newsletter_manager.newsletters)}")
@@ -293,6 +296,56 @@ class AutoBriefScheduler:
             self.logger.error(f"❌ Erreur traitement {user_info['email']}: {e}")
             return False
     
+    
+    def get_user_credentials_from_gist(self, user_email):
+        """Récupère les credentials OAuth2 de l'utilisateur depuis le Gist"""
+        try:
+            import requests
+            import json
+            
+            gist_id = os.getenv('GIST_ID')
+            gist_token = os.getenv('GIST_TOKEN')
+            
+            if not gist_id or not gist_token:
+                self.logger.error("❌ GIST_ID ou GIST_TOKEN manquant")
+                return None
+            
+            # Récupérer le Gist
+            headers = {
+                'Authorization': f'token {gist_token}',
+                'Accept': 'application/vnd.github.v3+json'
+            }
+            
+            response = requests.get(f'https://api.github.com/gists/{gist_id}', headers=headers)
+            
+            if response.status_code == 200:
+                gist_data = response.json()
+                if 'user_data.json' in gist_data['files']:
+                    content = gist_data['files']['user_data.json']['content']
+                    all_users_data = json.loads(content) if content else {}
+                    
+                    # Récupérer les données de l'utilisateur
+                    if user_email in all_users_data:
+                        user_data = all_users_data[user_email]
+                        # Vérifier si l'utilisateur a des credentials OAuth2 stockés
+                        if 'oauth_credentials' in user_data:
+                            return user_data['oauth_credentials']
+                        else:
+                            self.logger.warning(f"⚠️ Aucun token OAuth2 stocké pour {user_email}")
+                            return None
+                    else:
+                        self.logger.warning(f"⚠️ Utilisateur {user_email} non trouvé dans le Gist")
+                        return None
+                else:
+                    self.logger.error("❌ Fichier user_data.json non trouvé dans le Gist")
+                    return None
+            else:
+                self.logger.error(f"❌ Erreur accès Gist: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erreur récupération credentials utilisateur: {e}")
+            return None
     
     def update_last_run(self, user_email):
         """Met à jour la date de dernière exécution pour un utilisateur dans GitHub Gist"""

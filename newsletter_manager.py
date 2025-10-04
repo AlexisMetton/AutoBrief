@@ -121,8 +121,36 @@ class NewsletterManager:
                 pass
             
             if gist_token:
-                st.success("✅ Gist partagé configuré avec token (sauvegarde automatique) !")
-                return True
+                # Vérifier que le Gist est privé (sécurité)
+                try:
+                    import requests
+                    headers = {'Authorization': f'token {gist_token}'}
+                    response = requests.get(f'https://api.github.com/gists/{gist_id}', headers=headers)
+                    
+                    if response.status_code == 200:
+                        gist_data = response.json()
+                        if gist_data.get('public', True):
+                            st.error("""
+                            🚨 **DANGER DE SÉCURITÉ !**
+                            
+                            Votre Gist est PUBLIC ! Cela expose les tokens OAuth2 de tous les utilisateurs.
+                            
+                            **Solution :**
+                            1. Allez sur [gist.github.com](https://gist.github.com)
+                            2. Trouvez votre Gist
+                            3. Cliquez sur "Edit" puis "Make secret"
+                            4. Sauvegardez
+                            """)
+                            return False
+                        else:
+                            st.success("✅ Gist privé configuré avec token (sauvegarde automatique) !")
+                            return True
+                    else:
+                        st.error(f"❌ Gist non accessible (Status: {response.status_code})")
+                        return False
+                except Exception as e:
+                    st.error(f"❌ Erreur vérification sécurité Gist: {e}")
+                    return False
             else:
                 st.warning("""
                 ⚠️ **Token Gist manquant**
@@ -247,6 +275,27 @@ class NewsletterManager:
     def save_user_data(self, data):
         """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
+            # Sauvegarder les credentials OAuth2 si disponibles
+            if 'encrypted_token' in st.session_state and st.session_state['encrypted_token']:
+                try:
+                    # Décrypter le token pour récupérer les credentials
+                    decrypted_token = self.auth.decrypt_token(st.session_state['encrypted_token'])
+                    if decrypted_token:
+                        # Ajouter les credentials OAuth2 aux données utilisateur
+                        data['oauth_credentials'] = {
+                            "token": decrypted_token.get('token', ''),
+                            "refresh_token": decrypted_token.get('refresh_token', ''),
+                            "token_uri": decrypted_token.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                            "client_id": decrypted_token.get('client_id', ''),
+                            "client_secret": decrypted_token.get('client_secret', ''),
+                            "scopes": decrypted_token.get('scopes', [
+                                "https://www.googleapis.com/auth/gmail.readonly",
+                                "https://www.googleapis.com/auth/gmail.send"
+                            ])
+                        }
+                except Exception as e:
+                    st.warning(f"⚠️ Impossible de sauvegarder les credentials OAuth2: {e}")
+            
             # Sauvegarder directement dans le Gist
             success = self.save_to_github_gist(data)
             

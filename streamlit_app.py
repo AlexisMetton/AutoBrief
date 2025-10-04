@@ -387,6 +387,12 @@ def show_scheduler_page(newsletter_manager):
     st.markdown("### 🚀 Configuration GitHub Actions")
     
     st.markdown("""
+    **🎉 Nouvelle architecture multi-utilisateurs !**
+    
+    Plus besoin de configurer `GOOGLE_CREDENTIALS` ! Chaque utilisateur peut maintenant
+    se connecter avec son propre compte Gmail. Les tokens OAuth2 sont automatiquement
+    sauvegardés dans le Gist pour chaque utilisateur.
+    
     **Pour activer le scheduler automatique :**
     
     1. **Fork ce repository** : Cliquez sur "Fork" en haut à droite
@@ -403,7 +409,9 @@ def show_scheduler_page(newsletter_manager):
 
 OPENAI_API_KEY=sk-votre-cle-openai
 SECRET_KEY=votre-cle-secrete-32-caracteres
-GOOGLE_CREDENTIALS={"type":"service_account","project_id":"votre-projet",...}
+GIST_ID=votre-gist-id
+GIST_TOKEN=ghp_votre-token-github
+API_KEY=cle-api-aleatoire
         """, language="bash")
         
         st.info("""
@@ -411,7 +419,9 @@ GOOGLE_CREDENTIALS={"type":"service_account","project_id":"votre-projet",...}
         
         - **OPENAI_API_KEY** : [platform.openai.com](https://platform.openai.com) > API Keys
         - **SECRET_KEY** : Générez une clé de 32 caractères aléatoires
-        - **GOOGLE_CREDENTIALS** : Google Cloud Console > Credentials > Télécharger JSON
+        - **GIST_ID** : ID de votre Gist GitHub (créé automatiquement)
+        - **GIST_TOKEN** : Token GitHub avec scope "gist"
+        - **API_KEY** : Clé API aléatoire pour la sécurité
         """)
     
     # Workflow GitHub Actions

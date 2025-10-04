@@ -73,16 +73,17 @@ GOOGLE_CREDENTIALS = {
 
 ## 💾 Configuration GitHub Gist
 
-### 1. Créer un Gist Public
+### 1. Créer un Gist Privé
 
 1. Allez sur [gist.github.com](https://gist.github.com)
-2. Créez un nouveau Gist public
+2. Créez un nouveau Gist **privé** (pas public !)
 3. Nommez le fichier `user_data.json`
 4. Ajoutez ce contenu :
 ```json
 {}
 ```
-5. Copiez l'ID du Gist (dans l'URL)
+5. Cliquez sur **"Create secret gist"**
+6. Copiez l'ID du Gist (dans l'URL)
 
 ### 2. Créer un Token GitHub
 
@@ -187,6 +188,24 @@ python scheduler.py
 | `GIST_TOKEN` | Token GitHub | GitHub Settings > Developer settings |
 | `GOOGLE_CREDENTIALS` | Credentials OAuth2 | Via l'application Streamlit |
 | `API_KEY` | Clé API pour GitHub Actions | Clé aléatoire |
+
+## 🔒 Sécurité
+
+### ⚠️ **IMPORTANT : Gist Privé Obligatoire**
+
+**NE JAMAIS utiliser un Gist public !** Cela exposerait les tokens OAuth2 de tous les utilisateurs.
+
+- ✅ **Gist privé** - Seul vous pouvez y accéder
+- ✅ **Token GitHub** - Authentification requise pour lire/écrire
+- ✅ **Chiffrement** - Tokens OAuth2 chiffrés dans le Gist
+- ❌ **Gist public** - DANGEREUX ! Expose tous les tokens
+
+### 🛡️ **Bonnes pratiques :**
+
+1. **Gist privé uniquement** - Créez toujours un "secret gist"
+2. **Token GitHub sécurisé** - Utilisez un token avec scope "gist" uniquement
+3. **Révoquer les tokens** - Si compromis, révoquez immédiatement
+4. **Surveillance** - Vérifiez régulièrement l'accès au Gist
 
 ## 🆘 Support
 
