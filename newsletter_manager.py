@@ -291,8 +291,8 @@ class NewsletterManager:
     def save_user_data(self, data):
         """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
-            # Sauvegarder les credentials OAuth2 si disponibles
-            if 'encrypted_token' in st.session_state and st.session_state['encrypted_token']:
+            # Sauvegarder les credentials OAuth2 si disponibles (uniquement dans Streamlit)
+            if hasattr(st, 'session_state') and 'encrypted_token' in st.session_state and st.session_state['encrypted_token']:
                 try:
                     # Décrypter le token pour récupérer les credentials
                     decrypted_token = self.auth.decrypt_token(st.session_state['encrypted_token'])
@@ -311,19 +311,23 @@ class NewsletterManager:
                             ])
                         }
                 except Exception as e:
-                    st.warning(f"⚠️ Impossible de sauvegarder les credentials OAuth2: {e}")
+                    if hasattr(st, 'warning'):
+                        st.warning(f"⚠️ Impossible de sauvegarder les credentials OAuth2: {e}")
             
             # Sauvegarder directement dans le Gist
             success = self.save_to_github_gist(data)
             
             if success:
-                st.success("✅ Données sauvegardées automatiquement !")
+                if hasattr(st, 'success'):
+                    st.success("✅ Données sauvegardées automatiquement !")
             else:
-                st.error("❌ Erreur lors de la sauvegarde dans le Gist")
+                if hasattr(st, 'error'):
+                    st.error("❌ Erreur lors de la sauvegarde dans le Gist")
             
             return success
         except Exception as e:
-            st.error(f"❌ Erreur lors de la sauvegarde: {e}")
+            if hasattr(st, 'error'):
+                st.error(f"❌ Erreur lors de la sauvegarde: {e}")
             return False
     
     
@@ -419,11 +423,13 @@ class NewsletterManager:
                 
                 
                 if update_response.status_code == 200:
-                    st.success("✅ Données sauvegardées automatiquement dans le Gist !")
+                    if hasattr(st, 'success'):
+                        st.success("✅ Données sauvegardées automatiquement dans le Gist !")
                     return True
                 else:
-                    st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
-                    st.info("Vérifiez que le token Gist est correct dans les secrets")
+                    if hasattr(st, 'error'):
+                        st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                        st.info("Vérifiez que le token Gist est correct dans les secrets")
                     return False
             else:
                 # Pas de token Gist - sauvegarde en session uniquement
@@ -786,6 +792,47 @@ class NewsletterManager:
             st.error(f"❌ Erreur OpenAI: {e}")
             return ""
     
+    def process_newsletters_scheduler(self, days=7, send_email=False):
+        """Version simplifiée pour le scheduler (sans Streamlit)"""
+        newsletters = self.get_newsletters()
+        if not newsletters:
+            return None
+        
+        service = self.auth.get_gmail_service()
+        if not service:
+            return None
+        
+        # Créer la requête
+        query = self.get_query_for_emails(newsletters, days)
+        
+        # Récupérer les messages
+        try:
+            results = service.users().messages().list(userId='me', q=query).execute()
+            messages = results.get('messages', [])
+            
+            if not messages:
+                return None
+            
+            # Récupérer le contenu des messages
+            email_contents = []
+            for message in messages[:10]:  # Limiter à 10 messages
+                msg = service.users().messages().get(userId='me', id=message['id']).execute()
+                email_contents.append(self.extract_email_content(msg))
+            
+            # Générer le résumé avec l'IA
+            summary = self.generate_summary(email_contents)
+            
+            # Envoyer par email si demandé
+            if summary and send_email:
+                settings = self.get_user_settings()
+                notification_email = settings.get('notification_email')
+                if notification_email and notification_email.strip():
+                    self.send_summary_email(summary, notification_email)
+            
+            return summary
+        except Exception as e:
+            return None
+
     def process_newsletters(self, days=7, send_email=False):
         """Traite toutes les newsletters et génère le résumé"""
         newsletters = self.get_newsletters()

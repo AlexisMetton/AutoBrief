@@ -276,8 +276,8 @@ class AutoBriefScheduler:
                 
                 # Générer le résumé réel avec l'IA et envoyer l'email directement
                 self.logger.info(f"🔧 Tentative de génération du résumé IA...")
-                summary_result = newsletter_manager.process_newsletters(send_email=True)
-                self.logger.info(f"🔧 Résultat process_newsletters: {summary_result}")
+                summary_result = newsletter_manager.process_newsletters_scheduler(send_email=True)
+                self.logger.info(f"🔧 Résultat process_newsletters_scheduler: {summary_result}")
                 
                 # Vérifier si le résultat est un succès (True ou chaîne non vide)
                 if summary_result is True or (isinstance(summary_result, str) and summary_result.strip()):
@@ -333,10 +333,33 @@ class AutoBriefScheduler:
                             
                             # Vérifier si les données sont chiffrées
                             if oauth_creds.get('_encrypted', False) and '_encrypted_data' in oauth_creds:
-                                # Les données sont chiffrées, on ne peut pas les utiliser directement
-                                # Le scheduler doit utiliser les credentials via l'application Streamlit
-                                self.logger.warning(f"⚠️ Credentials chiffrés pour {user_email} - utilisation via Streamlit requise")
-                                return None
+                                # Les données sont chiffrées, on peut les déchiffrer avec SECRET_KEY
+                                try:
+                                    from cryptography.fernet import Fernet
+                                    import base64
+                                    import json
+                                    
+                                    # Récupérer SECRET_KEY depuis les variables d'environnement
+                                    secret_key = os.getenv('SECRET_KEY')
+                                    if not secret_key:
+                                        self.logger.error("❌ SECRET_KEY manquante pour déchiffrer les credentials")
+                                        return None
+                                    
+                                    # Générer la clé Fernet (même méthode que dans config.py)
+                                    key = base64.urlsafe_b64encode(secret_key.encode()[:32].ljust(32, b'0'))
+                                    fernet = Fernet(key)
+                                    
+                                    # Déchiffrer les credentials
+                                    encrypted_data = oauth_creds['_encrypted_data']
+                                    decrypted_data = fernet.decrypt(encrypted_data.encode())
+                                    decrypted_creds = json.loads(decrypted_data.decode())
+                                    
+                                    self.logger.info(f"✅ Credentials déchiffrés avec succès pour {user_email}")
+                                    return decrypted_creds
+                                    
+                                except Exception as e:
+                                    self.logger.error(f"❌ Erreur déchiffrement credentials pour {user_email}: {e}")
+                                    return None
                             else:
                                 # Ancien format non chiffré (pour compatibilité)
                                 return oauth_creds

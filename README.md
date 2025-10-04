@@ -201,6 +201,7 @@ python scheduler.py
 - ❌ **Gist public** - DANGEREUX ! Expose tous les tokens
 - ⚠️ **Gist secret sans token** - Accessible via URL directe (non sécurisé)
 - 🚨 **Contenu visible** - Même secret, le contenu est lisible si URL connue
+- 🚫 **Gist invisible** - Impossible sur GitHub (limitation de la plateforme)
 
 ### 🛡️ **Bonnes pratiques :**
 
@@ -211,6 +212,25 @@ python scheduler.py
 5. **Ne pas partager l'URL** - L'URL du Gist doit rester confidentielle
 6. **Chiffrement des données** - Les tokens OAuth2 sont chiffrés dans le Gist (nouveau)
 7. **Accès limité** - Seuls les utilisateurs autorisés peuvent lire/écrire
+
+### 🚫 **Limitations GitHub Gist :**
+
+**GitHub Gist ne permet PAS :**
+- ❌ **Gist privé** (n'existe pas)
+- ❌ **Gist invisible** (n'existe pas)
+- ❌ **Permissions granulaires** (n'existe pas)
+- ❌ **Authentification utilisateur** (n'existe pas)
+
+### 🔄 **Alternatives pour vraie invisibilité :**
+
+| Solution | Invisibilité | Coût | Complexité |
+|----------|-------------|------|------------|
+| **GitHub Gist** | ⚠️ Semi-secret | Gratuit | Simple |
+| **Base de données** | ✅ Privé | Payant | Complexe |
+| **Fichiers locaux** | ✅ Privé | Gratuit | Limité |
+| **Cloud Storage** | ✅ Privé | Payant | Moyen |
+
+**Recommandation :** GitHub Gist + Chiffrement = **Sécurité maximale possible** 🔒
 
 ## 🆘 Support
 
