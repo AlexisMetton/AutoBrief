@@ -271,9 +271,9 @@ class NewsletterManager:
                     1. Créez un token GitHub avec le scope `gist`
                     2. Ajoutez-le dans les secrets Streamlit : `GIST_TOKEN`
                     3. La sauvegarde sera automatique
-                    """)
-                    
-                    return False
+                """)
+                
+                return False
                 
             elif response.status_code == 404:
                 st.error(f"❌ Gist non trouvé: {gist_id}")
