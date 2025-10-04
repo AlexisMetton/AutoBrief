@@ -221,6 +221,10 @@ class NewsletterManager:
             except:
                 pass
             
+            # Fallback sur les variables d'environnement (pour GitHub Actions)
+            if not gist_id:
+                gist_id = os.getenv('GIST_ID')
+            
             # Fallback sur la session state
             if not gist_id:
                 gist_id = st.session_state.get('gist_id')
@@ -293,15 +297,23 @@ class NewsletterManager:
             except:
                 pass
             
+            # Fallback sur les variables d'environnement (pour GitHub Actions)
             if not gist_id:
-                st.warning("""
-                ⚠️ **Gist partagé non configuré**
-                
-                Pour utiliser la persistance automatique :
-                1. Le développeur doit créer un Gist manuellement
-                2. Ajouter le secret `GIST_ID` dans Streamlit Cloud
-                3. Tous les utilisateurs partageront le même Gist
-                """)
+                gist_id = os.getenv('GIST_ID')
+            
+            if not gist_id:
+                # En mode GitHub Actions, on ne peut pas afficher de warning Streamlit
+                if os.getenv('GITHUB_ACTIONS'):
+                    print("❌ GIST_ID non configuré dans les variables d'environnement")
+                else:
+                    st.warning("""
+                    ⚠️ **Gist partagé non configuré**
+                    
+                    Pour utiliser la persistance automatique :
+                    1. Le développeur doit créer un Gist manuellement
+                    2. Ajouter le secret `GIST_ID` dans Streamlit Cloud
+                    3. Tous les utilisateurs partageront le même Gist
+                    """)
                 return False
             
             # Vérifier que le Gist existe et est accessible
@@ -332,7 +344,18 @@ class NewsletterManager:
                 }
                 
             # Essayer de mettre à jour le Gist avec authentification GitHub
-            gist_token = st.secrets.get('GIST_TOKEN')
+            gist_token = None
+            
+            # Essayer d'abord depuis les secrets Streamlit
+            try:
+                if hasattr(st, 'secrets') and 'GIST_TOKEN' in st.secrets:
+                    gist_token = st.secrets['GIST_TOKEN']
+            except:
+                pass
+            
+            # Fallback sur les variables d'environnement (pour GitHub Actions)
+            if not gist_token:
+                gist_token = os.getenv('GIST_TOKEN')
             
             if gist_token:
                 print(f"DEBUG: Token trouvé - {gist_token[:10]}...")

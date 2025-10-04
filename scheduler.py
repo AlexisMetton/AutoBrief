@@ -246,6 +246,8 @@ class AutoBriefScheduler:
                 newsletter_manager.newsletters = user_info.get('newsletters', [])
                 newsletter_manager.user_settings = user_info.get('settings', {})
                 
+                self.logger.info(f"🔧 Données utilisateur passées au NewsletterManager")
+                
                 # Configurer l'accès Gmail pour le NewsletterManager
                 try:
                     from secure_auth import SecureAuth
