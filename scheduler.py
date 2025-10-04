@@ -259,8 +259,12 @@ class AutoBriefScheduler:
                     # Récupérer les credentials de l'utilisateur depuis le Gist
                     user_credentials = self.get_user_credentials_from_gist(user_info['email'])
                     if user_credentials:
-                        auth.set_external_credentials(user_credentials)
+                        # Convertir les credentials en JSON string pour SecureAuth
+                        import json
+                        credentials_json = json.dumps(user_credentials)
+                        auth.set_external_credentials(credentials_json)
                         self.logger.info(f"🔧 Credentials utilisateur configurés pour SecureAuth")
+                        self.logger.info(f"🔧 Credentials JSON: {credentials_json[:100]}...")
                     else:
                         self.logger.error(f"❌ Aucun token OAuth2 trouvé pour {user_info['email']} dans le Gist")
                         self.logger.error(f"❌ L'utilisateur doit se connecter au moins une fois dans l'application")
@@ -358,16 +362,35 @@ class AutoBriefScheduler:
                                     encrypted_data = oauth_creds['_encrypted_data']
                                     self.logger.info(f"🔧 Tentative de déchiffrement des données...")
                                     self.logger.info(f"🔧 Données chiffrées (premiers 50 caractères): {encrypted_data[:50]}...")
+                                    self.logger.info(f"🔧 Longueur des données chiffrées: {len(encrypted_data)}")
+                                    
+                                    # Vérifier le format des données chiffrées
+                                    try:
+                                        # Essayer de décoder base64 d'abord
+                                        import base64
+                                        decoded_data = base64.b64decode(encrypted_data)
+                                        self.logger.info(f"🔧 Données base64 décodées avec succès, longueur: {len(decoded_data)}")
+                                    except Exception as base64_error:
+                                        self.logger.error(f"❌ Erreur décodage base64: {base64_error}")
+                                        return None
                                     
                                     decrypted_data = fernet.decrypt(encrypted_data.encode())
+                                    self.logger.info(f"🔧 Données déchiffrées avec succès, longueur: {len(decrypted_data)}")
+                                    
                                     decrypted_creds = json.loads(decrypted_data.decode())
+                                    self.logger.info(f"🔧 JSON parsé avec succès")
                                     
                                     self.logger.info(f"✅ Credentials déchiffrés avec succès pour {user_email}")
                                     self.logger.info(f"🔧 Token trouvé: {decrypted_creds.get('token', '')[:20]}...")
+                                    self.logger.info(f"🔧 Refresh token trouvé: {decrypted_creds.get('refresh_token', '')[:20]}...")
+                                    self.logger.info(f"🔧 Client ID trouvé: {decrypted_creds.get('client_id', '')[:20]}...")
+                                    
                                     return decrypted_creds
                                     
                                 except Exception as e:
                                     self.logger.error(f"❌ Erreur déchiffrement credentials pour {user_email}: {e}")
+                                    self.logger.error(f"❌ Type d'erreur: {type(e).__name__}")
+                                    self.logger.error(f"❌ Message détaillé: {str(e)}")
                                     return None
                             else:
                                 # Ancien format non chiffré (pour compatibilité)
