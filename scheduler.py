@@ -229,13 +229,20 @@ class AutoBriefScheduler:
             
             # Générer le vrai résumé avec l'IA
             try:
-                from newsletter_manager import NewsletterManager
-                newsletter_manager = NewsletterManager()
-                
                 # Simuler une session utilisateur pour NewsletterManager
                 import streamlit as st
                 st.session_state['user_email'] = user_info['email']
                 st.session_state['authenticated'] = True
+                
+                self.logger.info(f"🔧 Configuration session: user_email={user_info['email']}")
+                
+                from newsletter_manager import NewsletterManager
+                newsletter_manager = NewsletterManager()
+                
+                # Forcer l'email utilisateur dans le NewsletterManager
+                newsletter_manager.user_email = user_info['email']
+                
+                self.logger.info(f"🔧 NewsletterManager user_email: {newsletter_manager.user_email}")
                 
                 # Générer le résumé réel
                 summary = newsletter_manager.process_newsletters(send_email=False)
