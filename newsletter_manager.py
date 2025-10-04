@@ -214,12 +214,15 @@ class NewsletterManager:
                     all_users_data = json.loads(existing_content) if existing_content else {}
                 else:
                     all_users_data = {}
-                
-                # Ajouter/mettre à jour les données de cet utilisateur
-                all_users_data[self.user_email] = data
-                
-                # Mettre à jour le Gist avec toutes les données
-                update_data = {
+            else:
+                print(f"DEBUG: Erreur lecture Gist - Status: {response.status_code}, Response: {response.text}")
+                return False
+            
+            # Ajouter/mettre à jour les données de cet utilisateur
+            all_users_data[self.user_email] = data
+            
+            # Mettre à jour le Gist avec toutes les données
+            update_data = {
                     "files": {
                         "user_data.json": {
                             "content": json.dumps(all_users_data, indent=2, ensure_ascii=False)
@@ -227,33 +230,42 @@ class NewsletterManager:
                     }
                 }
                 
-                # Essayer de mettre à jour le Gist avec authentification GitHub
-                gist_token = st.secrets.get('GIST_TOKEN')
+            # Essayer de mettre à jour le Gist avec authentification GitHub
+            gist_token = st.secrets.get('GIST_TOKEN')
+            
+            if gist_token:
+                print(f"DEBUG: Token trouvé - {gist_token[:10]}...")
+                # Utiliser le token GitHub pour l'authentification
+                headers = {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': f'token {gist_token}'
+                }
+                print(f"DEBUG: Headers - {headers}")
+            else:
+                print("DEBUG: Aucun token GIST_TOKEN trouvé")
+                return False
+            
+            if gist_token:
+                update_response = requests.patch(
+                    f'https://api.github.com/gists/{gist_id}',
+                    json=update_data,
+                    headers=headers
+                )
                 
-                if gist_token:
-                    # Utiliser le token GitHub pour l'authentification
-                    headers = {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Authorization': f'token {gist_token}'
-                    }
-                    
-                    update_response = requests.patch(
-                        f'https://api.github.com/gists/{gist_id}',
-                        json=update_data,
-                        headers=headers
-                    )
-                    
-                    if update_response.status_code == 200:
-                        st.success("✅ Données sauvegardées automatiquement dans le Gist !")
-                        return True
-                    else:
-                        st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
-                        st.info("Vérifiez que le token Gist est correct dans les secrets")
-                        return False
+                print(f"DEBUG: Response status - {update_response.status_code}")
+                print(f"DEBUG: Response text - {update_response.text}")
+                
+                if update_response.status_code == 200:
+                    st.success("✅ Données sauvegardées automatiquement dans le Gist !")
+                    return True
                 else:
-                    # Pas de token Gist - sauvegarde en session uniquement
-                    st.warning("""
-                    ⚠️ **Token Gist manquant**
+                    st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                    st.info("Vérifiez que le token Gist est correct dans les secrets")
+                    return False
+            else:
+                # Pas de token Gist - sauvegarde en session uniquement
+                st.warning("""
+                ⚠️ **Token Gist manquant**
                     
                     Pour la sauvegarde automatique :
                     1. Créez un token GitHub avec le scope `gist`
