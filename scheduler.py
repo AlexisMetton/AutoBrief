@@ -76,26 +76,92 @@ class AutoBriefScheduler:
     def should_run_for_user(self, user_settings):
         """Vérifie si un résumé doit être généré pour cet utilisateur"""
         if not user_settings.get('auto_send', False):
+            self.logger.info("❌ Auto-send désactivé")
+            return False
+        
+        # Vérifier d'abord le jour et l'heure
+        if not self.is_scheduled_time(user_settings):
+            self.logger.info("⏰ Pas encore l'heure pour cet utilisateur")
             return False
         
         last_run = user_settings.get('last_run')
         if not last_run:
+            self.logger.info("✅ Première exécution")
             return True
         
         try:
             last_run_date = datetime.fromisoformat(last_run)
             frequency = user_settings.get('frequency', 'weekly')
             
-            if frequency == 'daily':
-                return datetime.now() - last_run_date >= timedelta(days=1)
-            elif frequency == 'weekly':
-                return datetime.now() - last_run_date >= timedelta(weeks=1)
-            elif frequency == 'monthly':
-                return datetime.now() - last_run_date >= timedelta(days=30)
-        except:
+            # Pour les planifications par jour/heure, on ne vérifie pas la fréquence temporelle
+            # On s'exécute si c'est le bon jour et la bonne heure
+            if frequency in ['daily', 'weekly', 'monthly']:
+                # Vérifier seulement si on n'a pas déjà exécuté aujourd'hui
+                today = datetime.now().date()
+                last_run_date_only = last_run_date.date()
+                
+                if today == last_run_date_only:
+                    self.logger.info(f"⏳ Déjà exécuté aujourd'hui - {last_run_date}")
+                    return False
+                else:
+                    self.logger.info(f"✅ Pas encore exécuté aujourd'hui - Dernière: {last_run_date}")
+                    return True
+            else:
+                # Pour les autres fréquences, utiliser l'ancienne logique
+                if frequency == 'daily':
+                    should_run = datetime.now() - last_run_date >= timedelta(days=1)
+                elif frequency == 'weekly':
+                    should_run = datetime.now() - last_run_date >= timedelta(weeks=1)
+                elif frequency == 'monthly':
+                    should_run = datetime.now() - last_run_date >= timedelta(days=30)
+                else:
+                    should_run = True
+                
+                if should_run:
+                    self.logger.info(f"✅ Temps d'exécution - Fréquence: {frequency}")
+                else:
+                    self.logger.info(f"⏳ Pas encore le temps - Fréquence: {frequency}")
+                
+                return should_run
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erreur vérification fréquence: {e}")
             return True
         
         return False
+    
+    def is_scheduled_time(self, user_settings):
+        """Vérifie si c'est le bon jour et la bonne heure pour l'exécution"""
+        try:
+            schedule_day = user_settings.get('schedule_day', 'monday')
+            schedule_time = user_settings.get('schedule_time', '09:00')
+            
+            now = datetime.now()
+            current_day = now.strftime('%A').lower()
+            current_time = now.strftime('%H:%M')
+            
+            # Vérifier le jour (pour les fréquences weekly/monthly)
+            if user_settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
+                if current_day != schedule_day.lower():
+                    self.logger.info(f"📅 Jour incorrect - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
+                    return False
+                else:
+                    self.logger.info(f"📅 Jour correct - {current_day}")
+            
+            # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
+            target_hour = int(schedule_time.split(':')[0])
+            target_minute = int(schedule_time.split(':')[1])
+            current_hour = now.hour
+            current_minute = now.minute
+            
+            # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
+            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
+            self.logger.info(f"⏰ Heure - Actuelle: {current_hour}:{current_minute:02d}, Cible: {target_hour}:{target_minute:02d}, Diff: {time_diff}min")
+            return time_diff <= 30
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erreur vérification horaire: {e}")
+            return True  # En cas d'erreur, on autorise l'exécution
     
     def send_email(self, to_email, subject, content):
         """Envoie un email via Gmail API"""
