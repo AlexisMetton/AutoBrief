@@ -16,13 +16,7 @@ class NewsletterManager:
         self.config = Config()
         self.auth = SecureAuth()
         self.client = OpenAI(api_key=self.config.get_openai_key())
-        self.data_dir = "user_data"
         self.user_email = st.session_state.get('user_email', 'default_user')
-        self.user_data_file = os.path.join(self.data_dir, f"{self.user_email.replace('@', '_').replace('.', '_')}.json")
-        
-        # Créer le répertoire de données si nécessaire
-        if not os.path.exists(self.data_dir):
-            os.makedirs(self.data_dir)
         
         # Vérifier la configuration du Gist au démarrage
         self.check_gist_configuration()
@@ -77,68 +71,44 @@ class NewsletterManager:
             return False
     
     def load_user_data(self):
-        """Charge les données utilisateur automatiquement"""
+        """Charge les données utilisateur depuis le Gist uniquement"""
         try:
-            # 1. Essayer d'abord le cache de session (données modifiées récemment)
-            if 'user_data_cache' in st.session_state:
-                return st.session_state['user_data_cache']
-            
-            # 2. Essayer de charger depuis le stockage externe
-            data = self.load_from_external_storage()
-            if data:
-                st.session_state['user_data_cache'] = data
-                return data
-            
-            # 3. Fallback sur les secrets Streamlit
-            try:
-                if hasattr(st, 'secrets') and 'user_data' in st.secrets:
-                    all_users_data = st.secrets['user_data']
-                    if self.user_email in all_users_data:
-                        data = all_users_data[self.user_email]
-                        st.session_state['user_data_cache'] = data
-                        return data
-            except:
-                pass
-            
-            # 4. Fallback sur le fichier local
-            if os.path.exists(self.user_data_file):
-                with open(self.user_data_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    st.session_state['user_data_cache'] = data
-                    return data
-                    
-        except Exception as e:
-            pass
-        
-        # Retourner des données par défaut
-        default_data = {
-            'newsletters': [],
-            'settings': {
-                'frequency': 'weekly',
-                'days_to_analyze': 7,
-                'notification_email': '',
-                'last_run': None,
-                'auto_send': False,
-                'schedule_day': 'monday',
-                'schedule_time': '09:00',
-                'schedule_timezone': 'UTC'
-            }
-        }
-        
-        st.session_state['user_data_cache'] = default_data
-        return default_data
-    
-    def load_from_external_storage(self):
-        """Charge les données depuis GitHub Gist"""
-        try:
-            # GitHub Gist
+            # Charger uniquement depuis le Gist
             data = self.load_from_github_gist()
             if data:
                 return data
-                
-            return None
-        except:
-            return None
+            else:
+                # Pas de données dans le Gist - retourner des données par défaut
+                return {
+                    'newsletters': [],
+                    'settings': {
+                        'frequency': 'weekly',
+                        'days_to_analyze': 7,
+                        'notification_email': '',
+                        'last_run': None,
+                        'auto_send': False,
+                        'schedule_day': 'monday',
+                        'schedule_time': '09:00',
+                        'schedule_timezone': 'UTC'
+                    }
+                }
+                    
+        except Exception as e:
+            # En cas d'erreur, retourner des données par défaut
+            return {
+                'newsletters': [],
+                'settings': {
+                    'frequency': 'weekly',
+                    'days_to_analyze': 7,
+                    'notification_email': '',
+                    'last_run': None,
+                    'auto_send': False,
+                    'schedule_day': 'monday',
+                    'schedule_time': '09:00',
+                    'schedule_timezone': 'UTC'
+                }
+            }
+    
     
     def load_from_github_gist(self):
         """Charge depuis GitHub Gist partagé"""
@@ -192,37 +162,21 @@ class NewsletterManager:
             return None
     
     def save_user_data(self, data):
-        """Sauvegarde les données utilisateur automatiquement"""
+        """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
-            # Toujours sauvegarder dans la session state pour la persistance
-            st.session_state['user_data_cache'] = data
-            
-            # Essayer de sauvegarder automatiquement
-            success = self.save_to_external_storage(data)
+            # Sauvegarder directement dans le Gist
+            success = self.save_to_github_gist(data)
             
             if success:
                 st.success("✅ Données sauvegardées automatiquement !")
             else:
-                pass
+                st.error("❌ Erreur lors de la sauvegarde dans le Gist")
             
-            return True
+            return success
         except Exception as e:
             st.error(f"❌ Erreur lors de la sauvegarde: {e}")
             return False
     
-    def save_to_external_storage(self, data):
-        """Sauvegarde les données dans GitHub Gist automatiquement"""
-        try:
-            # GitHub Gist (gratuit et automatique)
-            if self.save_to_github_gist(data):
-                return True
-            
-            # Pas de fallback - sauvegarde Gist obligatoire
-            return False
-            
-        except Exception as e:
-            pass
-            return False
     
     def save_to_github_gist(self, data):
         """Sauvegarde dans GitHub Gist (gratuit et automatique)"""
@@ -324,24 +278,17 @@ class NewsletterManager:
     
         
     def save_newsletters(self, newsletters):
-        """Sauvegarde la liste des newsletters dans la session ET sur disque"""
-        st.session_state['newsletters'] = newsletters
-        
-        # Mettre à jour aussi les données utilisateur complètes
+        """Sauvegarde la liste des newsletters dans le Gist"""
+        # Mettre à jour les données utilisateur complètes
         user_data = self.load_user_data()
         user_data['newsletters'] = newsletters
         self.save_user_data(user_data)
         
     def get_newsletters(self):
-        """Récupère la liste des newsletters depuis la session ou les données utilisateur"""
-        # Charger les données utilisateur complètes (qui incluent les newsletters)
+        """Récupère la liste des newsletters depuis le Gist"""
+        # Charger les données utilisateur depuis le Gist
         user_data = self.load_user_data()
-        newsletters = user_data.get('newsletters', [])
-        
-        # Mettre en session pour la performance
-        st.session_state['newsletters'] = newsletters
-        
-        return newsletters
+        return user_data.get('newsletters', [])
     
     def get_user_settings(self):
         """Récupère les paramètres utilisateur"""
