@@ -242,7 +242,12 @@ class AutoBriefScheduler:
                 # Forcer l'email utilisateur dans le NewsletterManager
                 newsletter_manager.user_email = user_info['email']
                 
+                # Passer directement les données utilisateur
+                newsletter_manager.newsletters = user_info.get('newsletters', [])
+                newsletter_manager.user_settings = user_info.get('settings', {})
+                
                 self.logger.info(f"🔧 NewsletterManager user_email: {newsletter_manager.user_email}")
+                self.logger.info(f"🔧 Newsletters configurées: {len(newsletter_manager.newsletters)}")
                 
                 # Générer le résumé réel
                 summary = newsletter_manager.process_newsletters(send_email=False)
