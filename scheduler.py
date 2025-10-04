@@ -227,9 +227,29 @@ class AutoBriefScheduler:
             # Mettre à jour la date de dernière exécution
             self.update_last_run(user_info['email'])
             
-            # Log du résumé simulé
-            summary = f"Résumé automatique généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-            self.logger.info(f"📄 {summary}")
+            # Générer le vrai résumé avec l'IA
+            try:
+                from newsletter_manager import NewsletterManager
+                newsletter_manager = NewsletterManager()
+                
+                # Simuler une session utilisateur pour NewsletterManager
+                import streamlit as st
+                st.session_state['user_email'] = user_info['email']
+                st.session_state['authenticated'] = True
+                
+                # Générer le résumé réel
+                summary = newsletter_manager.process_newsletters(send_email=False)
+                
+                if summary:
+                    self.logger.info(f"📄 Résumé IA généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+                    self.logger.info(f"📄 Longueur du résumé: {len(summary)} caractères")
+                else:
+                    self.logger.warning(f"⚠️ Aucun contenu trouvé pour {user_info['email']}")
+                    summary = f"<p>Aucun contenu trouvé pour la période sélectionnée.</p>"
+                    
+            except Exception as e:
+                self.logger.error(f"❌ Erreur génération résumé IA: {e}")
+                summary = f"<p>Erreur lors de la génération du résumé: {str(e)}</p>"
             
             # Envoyer l'email de résumé
             notification_email = user_info['settings'].get('notification_email')
