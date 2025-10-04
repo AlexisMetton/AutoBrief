@@ -121,6 +121,12 @@ def main():
     subject = os.getenv('SUBJECT', '')
     content = os.getenv('CONTENT', '')
     
+    # Debug: afficher le contenu reçu
+    logger.info(f"📧 TO_EMAIL: {to_email}")
+    logger.info(f"📧 SUBJECT: {subject}")
+    logger.info(f"📧 CONTENT (premiers 200 caractères): {content[:200] if content else 'VIDE'}")
+    logger.info(f"📧 CONTENT (longueur): {len(content) if content else 0}")
+    
     if not to_email or not subject or not content:
         logger.error("❌ Paramètres manquants: TO_EMAIL, SUBJECT, CONTENT")
         return
