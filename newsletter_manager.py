@@ -350,7 +350,10 @@ class NewsletterManager:
             # Vérifier le jour (pour les fréquences weekly/monthly)
             if settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
                 if current_day != schedule_day.lower():
+                    print(f"DEBUG: Jour incorrect - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
                     return False
+                else:
+                    print(f"DEBUG: Jour correct - {current_day}")
             
             # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
             target_hour = int(schedule_time.split(':')[0])
@@ -360,6 +363,7 @@ class NewsletterManager:
             
             # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
             time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
+            print(f"DEBUG: Heure - Actuelle: {current_hour}:{current_minute:02d}, Cible: {target_hour}:{target_minute:02d}, Diff: {time_diff}min")
             return time_diff <= 30
             
         except Exception as e:
