@@ -385,19 +385,49 @@ def show_scheduler_page(newsletter_manager):
         # Bouton temporaire pour afficher les credentials OAuth2
         if st.button("🔑 Afficher credentials OAuth2 (pour GitHub Actions)", type="secondary"):
             try:
-                # Lire le fichier token.json
-                token_file = "token.json"
-                if os.path.exists(token_file):
-                    with open(token_file, 'r') as f:
-                        token_content = f.read()
-                    
-                    st.success("✅ Fichier token.json trouvé !")
-                    st.code(token_content, language="json")
-                    st.info("📋 Copiez ce contenu dans le secret GitHub 'GOOGLE_CREDENTIALS'")
+                # Vérifier si l'utilisateur est connecté
+                if 'user_email' not in st.session_state or st.session_state['user_email'] == 'default_user':
+                    st.warning("⚠️ Veuillez vous connecter avec Google d'abord.")
+                    return
+                
+                # Récupérer les credentials depuis la session Streamlit
+                if 'encrypted_token' in st.session_state and st.session_state['encrypted_token']:
+                    try:
+                        # Décrypter le token pour récupérer les credentials
+                        from secure_auth import SecureAuth
+                        auth = SecureAuth()
+                        
+                        # Décrypter le token
+                        decrypted_token = auth.decrypt_token(st.session_state['encrypted_token'])
+                        
+                        if decrypted_token:
+                            # Créer le JSON des credentials OAuth2
+                            credentials_json = {
+                                "token": decrypted_token.get('token', ''),
+                                "refresh_token": decrypted_token.get('refresh_token', ''),
+                                "token_uri": decrypted_token.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                                "client_id": decrypted_token.get('client_id', ''),
+                                "client_secret": decrypted_token.get('client_secret', ''),
+                                "scopes": decrypted_token.get('scopes', [
+                                    "https://www.googleapis.com/auth/gmail.readonly",
+                                    "https://www.googleapis.com/auth/gmail.send"
+                                ])
+                            }
+                            
+                            st.success("✅ Credentials OAuth2 récupérés depuis la session !")
+                            st.code(json.dumps(credentials_json, indent=2), language="json")
+                            st.info("📋 Copiez ce contenu dans le secret GitHub 'GOOGLE_CREDENTIALS'")
+                        else:
+                            st.error("❌ Impossible de décrypter le token. Reconnectez-vous.")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Erreur lors du décryptage du token: {e}")
+                        st.info("💡 Essayez de vous déconnecter et reconnecter avec Google.")
                 else:
-                    st.warning("⚠️ Fichier token.json non trouvé. Connectez-vous d'abord avec Google.")
+                    st.warning("⚠️ Aucun token trouvé dans la session. Reconnectez-vous avec Google.")
+                    
             except Exception as e:
-                st.error(f"❌ Erreur lors de la lecture du fichier token.json: {e}")
+                st.error(f"❌ Erreur lors de la récupération des credentials: {e}")
     
     # Configuration GitHub Actions
     st.markdown("### 🚀 Configuration GitHub Actions")
