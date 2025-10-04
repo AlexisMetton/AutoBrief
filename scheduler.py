@@ -249,15 +249,21 @@ class AutoBriefScheduler:
                 self.logger.info(f"🔧 NewsletterManager user_email: {newsletter_manager.user_email}")
                 self.logger.info(f"🔧 Newsletters configurées: {len(newsletter_manager.newsletters)}")
                 
-                # Générer le résumé réel (version standalone)
-                summary = self.generate_summary_standalone(newsletter_manager, user_info)
+                # Générer le résumé réel avec l'IA
+                self.logger.info(f"🔧 Tentative de génération du résumé IA...")
+                summary = newsletter_manager.process_newsletters(send_email=False)
+                self.logger.info(f"🔧 Résultat process_newsletters: {summary is not None}")
+                if summary:
+                    self.logger.info(f"🔧 Type du résumé: {type(summary)}")
+                    self.logger.info(f"🔧 Longueur: {len(str(summary))}")
                 
                 if summary:
                     self.logger.info(f"📄 Résumé IA généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
                     self.logger.info(f"📄 Longueur du résumé: {len(summary)} caractères")
                 else:
                     self.logger.warning(f"⚠️ Aucun contenu trouvé pour {user_info['email']}")
-                    summary = f"<p>Aucun contenu trouvé pour la période sélectionnée.</p>"
+                    self.logger.info(f"🔧 Fallback vers résumé standalone...")
+                    summary = self.generate_summary_standalone(newsletter_manager, user_info)
                     
             except Exception as e:
                 self.logger.error(f"❌ Erreur génération résumé IA: {e}")
