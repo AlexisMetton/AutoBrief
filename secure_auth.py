@@ -99,12 +99,11 @@ class SecureAuth:
                 scopes=token_data['scopes']
             )
             
-            # Vérifier si le token est expiré (avec une marge de 5 minutes)
+            # Vérifier si le token est expiré
             if st.session_state.get('token_expiry'):
-                from datetime import datetime, timedelta
+                from datetime import datetime
                 expiry = datetime.fromisoformat(st.session_state['token_expiry'])
-                # Marge de 5 minutes pour éviter les problèmes de synchronisation
-                if datetime.now() >= (expiry - timedelta(minutes=5)):
+                if datetime.now() >= expiry:
                     return None
                     
             return credentials
@@ -112,26 +111,10 @@ class SecureAuth:
             st.error(f"Erreur lors du chargement du token: {e}")
             return None
     
-    def is_authenticated(self):
-        """Vérifie si l'utilisateur est authentifié avec un token valide"""
-        if 'authenticated' not in st.session_state or not st.session_state['authenticated']:
-            return False
-            
-        # Vérifier que le token est toujours valide
-        credentials = self.load_encrypted_token()
-        return credentials is not None
-    
     def authenticate_user(self):
         """Authentifie l'utilisateur avec Google OAuth"""
-        # Vérifier si déjà authentifié avec un token valide
         if 'authenticated' in st.session_state and st.session_state['authenticated']:
-            # Vérifier que le token est toujours valide
-            credentials = self.load_encrypted_token()
-            if credentials:
-                return True
-            else:
-                # Token expiré ou invalide, nettoyer la session
-                self.clear_session()
+            return True
             
         st.markdown("### 🔐 Authentification Google")
         st.info("Pour utiliser AutoBrief, vous devez vous connecter avec votre compte Google.")

@@ -27,7 +27,7 @@ class NewsletterManager:
         self.check_gist_configuration()
     
     def _detect_reconnection(self):
-        """Détecte automatiquement la reconnexion (simplifié)"""
+        """Détecte automatiquement la reconnexion et recharge les données"""
         try:
             current_email = st.session_state.get('user_email', 'default_user')
             last_email = st.session_state.get('last_user_email', None)
@@ -36,14 +36,73 @@ class NewsletterManager:
             
             # Si l'email a changé, c'est une reconnexion
             if current_email != last_email and current_email != 'default_user':
-                print(f"DEBUG: Reconnexion détectée - mise à jour de l'email")
+                print(f"DEBUG: Reconnexion détectée - rechargement automatique des données")
+                
+                # Vider le cache des données
+                if 'user_data_cache' in st.session_state:
+                    del st.session_state['user_data_cache']
                 
                 # Mettre à jour l'email en session
                 st.session_state['last_user_email'] = current_email
-                st.success("✅ Reconnexion détectée - données chargées depuis le Gist !")
+                
+                # Recharger automatiquement les données
+                self._auto_reload_data()
+            
+            # Si pas d'email en session mais qu'on a un token valide, restaurer la session
+            elif current_email == 'default_user' and 'encrypted_token' in st.session_state:
+                print(f"DEBUG: Session perdue détectée - tentative de restauration")
+                self._restore_session_from_token()
                 
         except Exception as e:
             print(f"DEBUG: Erreur dans _detect_reconnection: {e}")
+    
+    def _auto_reload_data(self):
+        """Recharge automatiquement les données depuis le Gist"""
+        try:
+            print(f"DEBUG: _auto_reload_data - rechargement automatique pour {self.user_email}")
+            
+            # Forcer le rechargement depuis le Gist
+            data = self.load_from_github_gist()
+            if data:
+                print(f"DEBUG: _auto_reload_data - données rechargées: {data}")
+                # Mettre à jour la session avec les nouvelles données
+                st.session_state['user_data_cache'] = data
+                st.success("✅ Données automatiquement rechargées depuis le Gist !")
+            else:
+                print(f"DEBUG: _auto_reload_data - aucune donnée trouvée dans le Gist")
+                
+        except Exception as e:
+            print(f"DEBUG: Erreur dans _auto_reload_data: {e}")
+    
+    def _restore_session_from_token(self):
+        """Restaure la session à partir du token chiffré"""
+        try:
+            print(f"DEBUG: _restore_session_from_token - tentative de restauration")
+            
+            # Vérifier si le token est valide
+            if self.auth.is_authenticated():
+                print(f"DEBUG: Token valide trouvé - restauration de la session")
+                
+                # Récupérer l'email depuis le token
+                credentials = self.auth.get_credentials()
+                if credentials:
+                    user_email = self.auth.get_user_email(credentials)
+                    if user_email:
+                        # Restaurer la session
+                        st.session_state['user_email'] = user_email
+                        st.session_state['authenticated'] = True
+                        st.session_state['last_user_email'] = user_email
+                        
+                        print(f"DEBUG: Session restaurée pour {user_email}")
+                        st.success("✅ Session restaurée automatiquement !")
+                        return True
+            
+            print(f"DEBUG: Impossible de restaurer la session")
+            return False
+            
+        except Exception as e:
+            print(f"DEBUG: Erreur dans _restore_session_from_token: {e}")
+            return False
     
     def check_gist_configuration(self):
         """Vérifie la configuration du Gist au démarrage"""
@@ -95,19 +154,27 @@ class NewsletterManager:
             return False
     
     def load_user_data(self):
-        """Charge les données utilisateur directement depuis le Gist"""
+        """Charge les données utilisateur depuis le Gist uniquement"""
         try:
             print(f"DEBUG: load_user_data appelé pour {self.user_email}")
             
-            # Charger directement depuis le Gist (pas de cache)
+            # Vérifier d'abord le cache en session
+            if 'user_data_cache' in st.session_state:
+                cached_data = st.session_state['user_data_cache']
+                print(f"DEBUG: load_user_data - données trouvées dans le cache: {cached_data}")
+                return cached_data
+            
+            # Si pas de cache, charger depuis le Gist
             data = self.load_from_github_gist()
             if data:
                 print(f"DEBUG: load_user_data - données trouvées dans le Gist: {data}")
+                # Mettre en cache
+                st.session_state['user_data_cache'] = data
                 return data
             else:
                 print(f"DEBUG: load_user_data - aucune donnée trouvée, retour des données par défaut")
                 # Pas de données dans le Gist - retourner des données par défaut
-                return {
+                default_data = {
                     'newsletters': [],
                     'settings': {
                         'frequency': 'weekly',
@@ -120,6 +187,9 @@ class NewsletterManager:
                         'schedule_timezone': 'UTC'
                     }
                 }
+                # Mettre en cache les données par défaut
+                st.session_state['user_data_cache'] = default_data
+                return default_data
                     
         except Exception as e:
             # En cas d'erreur, retourner des données par défaut

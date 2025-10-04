@@ -261,8 +261,8 @@ def show_configuration_page():
         st.info(f"📦 Streamlit: {st.__version__}")
     
     with col2:
-        st.info(f"🔐 Authentification: {'✅ Active' if newsletter_manager.auth.is_authenticated() else '❌ Inactive'}")
-        st.info(f"📧 Gmail API: {'✅ Connecté' if newsletter_manager.auth.is_authenticated() else '❌ Non connecté'}")
+        st.info(f"🔐 Authentification: {'✅ Active' if st.session_state.get('authenticated') else '❌ Inactive'}")
+        st.info(f"📧 Gmail API: {'✅ Connecté' if st.session_state.get('authenticated') else '❌ Non connecté'}")
 
 def show_results_page(newsletter_manager):
     """Page des résultats"""
