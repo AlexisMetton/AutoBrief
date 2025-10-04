@@ -246,6 +246,9 @@ class AutoBriefScheduler:
                 newsletter_manager.newsletters = user_info.get('newsletters', [])
                 newsletter_manager.user_settings = user_info.get('settings', {})
                 
+                # Désactiver la sauvegarde dans le scheduler
+                newsletter_manager._scheduler_mode = True
+                
                 self.logger.info(f"🔧 Données utilisateur passées au NewsletterManager")
                 
                 # Configurer l'accès Gmail pour le NewsletterManager
@@ -345,16 +348,22 @@ class AutoBriefScheduler:
                                         self.logger.error("❌ SECRET_KEY manquante pour déchiffrer les credentials")
                                         return None
                                     
+                                    self.logger.info(f"🔧 SECRET_KEY trouvée: {secret_key[:10]}...")
+                                    
                                     # Générer la clé Fernet (même méthode que dans config.py)
                                     key = base64.urlsafe_b64encode(secret_key.encode()[:32].ljust(32, b'0'))
                                     fernet = Fernet(key)
                                     
                                     # Déchiffrer les credentials
                                     encrypted_data = oauth_creds['_encrypted_data']
+                                    self.logger.info(f"🔧 Tentative de déchiffrement des données...")
+                                    self.logger.info(f"🔧 Données chiffrées (premiers 50 caractères): {encrypted_data[:50]}...")
+                                    
                                     decrypted_data = fernet.decrypt(encrypted_data.encode())
                                     decrypted_creds = json.loads(decrypted_data.decode())
                                     
                                     self.logger.info(f"✅ Credentials déchiffrés avec succès pour {user_email}")
+                                    self.logger.info(f"🔧 Token trouvé: {decrypted_creds.get('token', '')[:20]}...")
                                     return decrypted_creds
                                     
                                 except Exception as e:

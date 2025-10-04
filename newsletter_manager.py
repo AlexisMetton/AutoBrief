@@ -16,7 +16,8 @@ class NewsletterManager:
         self.config = Config()
         self.auth = SecureAuth()
         self.client = OpenAI(api_key=self.config.get_openai_key())
-        self.user_email = st.session_state.get('user_email', 'default_user')
+        self.user_email = st.session_state.get('user_email', 'default_user') if hasattr(st, 'session_state') else 'default_user'
+        self._scheduler_mode = False  # Mode scheduler désactivé par défaut
         
         # Détecter automatiquement la reconnexion
         self._detect_reconnection()
@@ -291,6 +292,10 @@ class NewsletterManager:
     def save_user_data(self, data):
         """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
+            # En mode scheduler, ne pas sauvegarder
+            if self._scheduler_mode:
+                return True
+            
             # Sauvegarder les credentials OAuth2 si disponibles (uniquement dans Streamlit)
             if hasattr(st, 'session_state') and 'encrypted_token' in st.session_state and st.session_state['encrypted_token']:
                 try:
