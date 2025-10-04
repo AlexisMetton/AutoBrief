@@ -14,6 +14,7 @@ class SecureAuth:
     def __init__(self):
         self.config = Config()
         self.encryption = self.config.get_encryption_key()
+        self.external_credentials = None  # Pour les credentials externes (GitHub Actions)
         
     
     def get_credentials_file(self):
@@ -80,7 +81,29 @@ class SecureAuth:
         return False
     
     def load_encrypted_token(self):
-        """Charge le token chiffré depuis la session Streamlit"""
+        """Charge le token chiffré depuis la session Streamlit ou credentials externes"""
+        
+        # Si on a des credentials externes (GitHub Actions), les utiliser
+        if self.external_credentials:
+            try:
+                credentials_data = json.loads(self.external_credentials)
+                
+                # Créer l'objet Credentials
+                credentials = Credentials(
+                    token=credentials_data['token'],
+                    refresh_token=credentials_data['refresh_token'],
+                    token_uri=credentials_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                    client_id=credentials_data['client_id'],
+                    client_secret=credentials_data['client_secret'],
+                    scopes=credentials_data.get('scopes', self.config.SCOPES)
+                )
+                
+                return credentials
+            except Exception as e:
+                print(f"❌ Erreur chargement credentials externes: {e}")
+                return None
+        
+        # Sinon, utiliser la session Streamlit
         if 'encrypted_token' not in st.session_state:
             return None
             
@@ -110,6 +133,10 @@ class SecureAuth:
         except Exception as e:
             st.error(f"Erreur lors du chargement du token: {e}")
             return None
+    
+    def set_external_credentials(self, credentials_json):
+        """Définit les credentials externes (pour GitHub Actions)"""
+        self.external_credentials = credentials_json
     
     def authenticate_user(self):
         """Authentifie l'utilisateur avec Google OAuth"""

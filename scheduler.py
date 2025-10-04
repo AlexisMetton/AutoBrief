@@ -251,7 +251,15 @@ class AutoBriefScheduler:
                     from secure_auth import SecureAuth
                     auth = SecureAuth()
                     
-                    # Simuler les credentials Gmail pour le NewsletterManager
+                    # Passer les credentials Google depuis GitHub Actions
+                    google_credentials = os.getenv('GOOGLE_CREDENTIALS')
+                    if google_credentials:
+                        auth.set_external_credentials(google_credentials)
+                        self.logger.info(f"🔧 Credentials Google configurés pour SecureAuth")
+                    else:
+                        self.logger.error(f"❌ GOOGLE_CREDENTIALS non trouvé dans les variables d'environnement")
+                    
+                    # Configurer l'auth pour le NewsletterManager
                     newsletter_manager.auth = auth
                     
                     self.logger.info(f"🔧 Gmail auth configuré pour NewsletterManager")
@@ -273,9 +281,9 @@ class AutoBriefScheduler:
                     self.logger.info(f"📄 Résumé IA généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
                     self.logger.info(f"📄 Longueur du résumé: {len(summary)} caractères")
                 else:
-                    self.logger.warning(f"⚠️ Aucun contenu trouvé pour {user_info['email']}")
-                    self.logger.info(f"🔧 Fallback vers résumé standalone...")
-                    summary = self.generate_summary_standalone(newsletter_manager, user_info)
+                    self.logger.error(f"❌ Échec génération résumé IA pour {user_info['email']}")
+                    self.logger.error(f"❌ Vérifiez les credentials Google et les permissions Gmail")
+                    return False
                     
             except Exception as e:
                 self.logger.error(f"❌ Erreur génération résumé IA: {e}")
@@ -309,40 +317,6 @@ class AutoBriefScheduler:
             self.logger.error(f"❌ Erreur traitement {user_info['email']}: {e}")
             return False
     
-    def generate_summary_standalone(self, newsletter_manager, user_info):
-        """Génère un résumé standalone sans accès Gmail"""
-        try:
-            # Créer un résumé basé sur les newsletters configurées
-            newsletters = user_info.get('newsletters', [])
-            settings = user_info.get('settings', {})
-            
-            if not newsletters:
-                return "<p>Aucune newsletter configurée.</p>"
-            
-            # Créer un résumé simulé mais informatif
-            summary_html = f"""
-            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 10px 0;">
-                <h3>📰 Résumé de vos newsletters</h3>
-                <p><strong>Newsletters suivies :</strong></p>
-                <ul>
-            """
-            
-            for newsletter in newsletters:
-                summary_html += f"<li>{newsletter}</li>"
-            
-            summary_html += f"""
-                </ul>
-                <p><strong>Période analysée :</strong> {settings.get('days', 7)} derniers jours</p>
-                <p><strong>Fréquence :</strong> {settings.get('frequency', 'weekly')}</p>
-                <p><strong>Note :</strong> Ce résumé a été généré automatiquement. Pour un résumé détaillé avec le contenu des emails, connectez-vous à l'application AutoBrief.</p>
-            </div>
-            """
-            
-            return summary_html
-            
-        except Exception as e:
-            self.logger.error(f"❌ Erreur génération résumé standalone: {e}")
-            return f"<p>Erreur lors de la génération du résumé: {str(e)}</p>"
     
     def update_last_run(self, user_email):
         """Met à jour la date de dernière exécution pour un utilisateur dans GitHub Gist"""
