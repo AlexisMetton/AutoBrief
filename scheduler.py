@@ -158,52 +158,46 @@ class AutoBriefScheduler:
             return True  # En cas d'erreur, on autorise l'exécution
     
     def send_email(self, to_email, subject, content):
-        """Envoie un email via l'API Streamlit"""
+        """Envoie un email via le script d'envoi"""
         try:
-            import requests
-            import urllib.parse
+            import subprocess
             
-            # URL de votre application Streamlit
-            streamlit_url = "https://alexismetton.streamlit.app"
+            # Définir les variables d'environnement pour le script
+            env = os.environ.copy()
+            env['TO_EMAIL'] = to_email
+            env['SUBJECT'] = subject
+            env['CONTENT'] = content
             
-            # Récupérer la clé API depuis les secrets GitHub
-            api_key = os.getenv('API_KEY')
-            if not api_key:
-                self.logger.error("❌ API_KEY non trouvé dans les secrets GitHub")
-                return False
+            self.logger.info(f"📧 Envoi email pour {to_email}")
+            self.logger.info(f"📧 Sujet: {subject}")
             
-            # Construire l'URL de l'API
-            api_url = f"{streamlit_url}/api"
+            # Exécuter le script d'envoi d'email
+            result = subprocess.run(
+                ['python', 'send_email.py'],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
             
-            # Paramètres de la requête
-            params = {
-                'action': 'send_email',
-                'api_key': api_key,
-                'user_email': to_email,
-                'subject': subject,
-                'content': content
-            }
+            # Afficher les logs
+            if result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    self.logger.info(f"📧 {line}")
             
-            self.logger.info(f"📧 Envoi email via API Streamlit pour {to_email}")
-            self.logger.info(f"📧 URL: {api_url}")
+            if result.stderr:
+                for line in result.stderr.strip().split('\n'):
+                    self.logger.error(f"❌ {line}")
             
-            # Faire l'appel API
-            response = requests.get(api_url, params=params, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                if result.get('status') == 200:
-                    self.logger.info(f"✅ Email envoyé avec succès à {to_email}")
-                    return True
-                else:
-                    self.logger.error(f"❌ Erreur API: {result.get('error', 'Erreur inconnue')}")
-                    return False
+            if result.returncode == 0:
+                self.logger.info(f"✅ Email envoyé avec succès à {to_email}")
+                return True
             else:
-                self.logger.error(f"❌ Erreur HTTP {response.status_code}: {response.text}")
+                self.logger.error(f"❌ Échec envoi email (code: {result.returncode})")
                 return False
             
-        except requests.exceptions.Timeout:
-            self.logger.error("❌ Timeout lors de l'appel API")
+        except subprocess.TimeoutExpired:
+            self.logger.error("❌ Timeout lors de l'envoi d'email")
             return False
         except Exception as e:
             self.logger.error(f"❌ Erreur envoi email: {e}")
