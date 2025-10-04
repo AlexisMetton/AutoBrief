@@ -274,14 +274,6 @@ class NewsletterManager:
                 """)
                 
                 return False
-                
-            elif response.status_code == 404:
-                st.error(f"❌ Gist non trouvé: {gist_id}")
-                st.info("Vérifiez que l'ID du Gist est correct dans les secrets Streamlit")
-                return False
-            else:
-                st.error(f"❌ Erreur lors de l'accès au Gist: {response.status_code}")
-                return False
             
         except Exception as e:
             st.error(f"❌ Erreur GitHub Gist: {e}")
