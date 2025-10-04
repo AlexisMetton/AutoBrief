@@ -842,33 +842,63 @@ class NewsletterManager:
         """Traite toutes les newsletters et génère le résumé"""
         newsletters = self.get_newsletters()
         if not newsletters:
-            st.error("❌ Aucune newsletter configurée")
+            if hasattr(st, 'error'):
+                st.error("❌ Aucune newsletter configurée")
+            else:
+                print("❌ Aucune newsletter configurée")
             return None
         
         service = self.auth.get_gmail_service()
         if not service:
+            if hasattr(st, 'error'):
+                st.error("❌ Impossible de se connecter à Gmail")
+            else:
+                print("❌ Impossible de se connecter à Gmail")
             return None
         
         # Créer la requête
         query = self.get_query_for_emails(newsletters, days)
         
+        # Debug logs
+        if not hasattr(st, 'spinner'):
+            print(f"🔧 Query Gmail: {query}")
+            print(f"🔧 Newsletters: {newsletters}")
+        
         # Récupérer les messages
-        with st.spinner("🔍 Recherche des emails..."):
+        if hasattr(st, 'spinner'):
+            with st.spinner("🔍 Recherche des emails..."):
+                messages = self.list_messages(service, query)
+        else:
+            print("🔍 Recherche des emails...")
             messages = self.list_messages(service, query)
         
         if not messages:
-            st.warning("⚠️ Aucun email trouvé pour la période sélectionnée")
+            if hasattr(st, 'warning'):
+                st.warning("⚠️ Aucun email trouvé pour la période sélectionnée")
+            else:
+                print("⚠️ Aucun email trouvé pour la période sélectionnée")
             return None
         
-        st.success(f"✅ {len(messages)} emails trouvés")
+        if hasattr(st, 'success'):
+            st.success(f"✅ {len(messages)} emails trouvés")
+        else:
+            print(f"✅ {len(messages)} emails trouvés")
         
         # Traiter chaque message
         output = ""
-        progress_bar = st.progress(0)
+        if hasattr(st, 'progress'):
+            progress_bar = st.progress(0)
+        else:
+            progress_bar = None
         
         for idx, msg in enumerate(messages):
-            with st.spinner(f"📧 Traitement de l'email {idx + 1}/{len(messages)}..."):
+            if hasattr(st, 'spinner'):
+                with st.spinner(f"📧 Traitement de l'email {idx + 1}/{len(messages)}..."):
+                    message = self.get_message(service, msg['id'])
+            else:
+                print(f"📧 Traitement de l'email {idx + 1}/{len(messages)}...")
                 message = self.get_message(service, msg['id'])
+            
                 if message:
                     body = self.get_message_body(message)
                     if body:
@@ -877,18 +907,24 @@ class NewsletterManager:
                             summary = self.replace_redirected_links(summary)
                             output += f"**Source {idx + 1}:**\n{summary}\n\n"
             
-            progress_bar.progress((idx + 1) / len(messages))
+            if progress_bar:
+                progress_bar.progress((idx + 1) / len(messages))
         
         # Mettre à jour la date de dernière exécution
         if output:
             self.update_last_run()
-            
-            # Envoyer par email seulement si demandé (génération automatique)
-            if send_email:
-                settings = self.get_user_settings()
-                notification_email = settings.get('notification_email')
-                if notification_email and notification_email.strip():
-                    self.send_summary_email(output, notification_email)
+            if not hasattr(st, 'spinner'):
+                print(f"🔧 Output généré: {len(output)} caractères")
+            else:
+                if not hasattr(st, 'spinner'):
+                    print("❌ Aucun output généré")
+        
+        # Envoyer par email seulement si demandé (génération automatique)
+        if send_email:
+            settings = self.get_user_settings()
+            notification_email = settings.get('notification_email')
+            if notification_email and notification_email.strip():
+                self.send_summary_email(output, notification_email)
         
         return output
     
