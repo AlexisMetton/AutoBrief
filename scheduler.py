@@ -271,17 +271,14 @@ class AutoBriefScheduler:
                 self.logger.info(f"🔧 NewsletterManager user_email: {newsletter_manager.user_email}")
                 self.logger.info(f"🔧 Newsletters configurées: {len(newsletter_manager.newsletters)}")
                 
-                # Générer le résumé réel avec l'IA
+                # Générer le résumé réel avec l'IA et envoyer l'email directement
                 self.logger.info(f"🔧 Tentative de génération du résumé IA...")
-                summary = newsletter_manager.process_newsletters(send_email=False)
-                self.logger.info(f"🔧 Résultat process_newsletters: {summary is not None}")
-                if summary:
-                    self.logger.info(f"🔧 Type du résumé: {type(summary)}")
-                    self.logger.info(f"🔧 Longueur: {len(str(summary))}")
+                summary_success = newsletter_manager.process_newsletters(send_email=True)
+                self.logger.info(f"🔧 Résultat process_newsletters: {summary_success}")
                 
-                if summary:
-                    self.logger.info(f"📄 Résumé IA généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-                    self.logger.info(f"📄 Longueur du résumé: {len(summary)} caractères")
+                if summary_success:
+                    self.logger.info(f"📄 Résumé IA généré et email envoyé avec succès pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+                    return True
                 else:
                     self.logger.error(f"❌ Échec génération résumé IA pour {user_info['email']}")
                     self.logger.error(f"❌ Vérifiez les credentials Google et les permissions Gmail")
@@ -289,31 +286,7 @@ class AutoBriefScheduler:
                     
             except Exception as e:
                 self.logger.error(f"❌ Erreur génération résumé IA: {e}")
-                summary = f"<p>Erreur lors de la génération du résumé: {str(e)}</p>"
-            
-            # Envoyer l'email de résumé
-            notification_email = user_info['settings'].get('notification_email')
-            if notification_email and notification_email.strip():
-                subject = f"📧 Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
-                content = f"""
-                <h2>📧 Résumé de vos newsletters</h2>
-                <p>Bonjour,</p>
-                <p>Voici votre résumé automatique généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')} :</p>
-                <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px;">
-                    {summary}
-                </div>
-                <p>---</p>
-                <p><em>Généré automatiquement par AutoBrief</em></p>
-                """
-                
-                if self.send_email(notification_email, subject, content):
-                    self.logger.info(f"✅ Email de résumé envoyé à {notification_email}")
-                else:
-                    self.logger.error(f"❌ Échec envoi email à {notification_email}")
-            else:
-                self.logger.warning(f"⚠️ Aucune adresse email de notification configurée pour {user_info['email']}")
-            
-            return True
+                return False
             
         except Exception as e:
             self.logger.error(f"❌ Erreur traitement {user_info['email']}: {e}")
