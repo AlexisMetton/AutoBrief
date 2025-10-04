@@ -96,16 +96,10 @@ class AutoBriefScheduler:
             # Pour les planifications par jour/heure, on ne vérifie pas la fréquence temporelle
             # On s'exécute si c'est le bon jour et la bonne heure
             if frequency in ['daily', 'weekly', 'monthly']:
-                # Vérifier seulement si on n'a pas déjà exécuté aujourd'hui
-                today = datetime.now().date()
-                last_run_date_only = last_run_date.date()
-                
-                if today == last_run_date_only:
-                    self.logger.info(f"⏳ Déjà exécuté aujourd'hui - {last_run_date}")
-                    return False
-                else:
-                    self.logger.info(f"✅ Pas encore exécuté aujourd'hui - Dernière: {last_run_date}")
-                    return True
+                # Pour les planifications par jour/heure, on s'exécute toujours si c'est le bon moment
+                # On ne bloque pas les exécutions multiples le même jour
+                self.logger.info(f"✅ Planification par jour/heure - Exécution autorisée")
+                return True
             else:
                 # Pour les autres fréquences, utiliser l'ancienne logique
                 if frequency == 'daily':
