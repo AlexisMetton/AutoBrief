@@ -62,6 +62,16 @@ def main():
     auth = SecureAuth()
     newsletter_manager = NewsletterManager()
     
+    # Vérifier si un résumé automatique doit être généré
+    if newsletter_manager.should_run_automatically():
+        with st.spinner("🔄 Génération automatique en cours..."):
+            result = newsletter_manager.process_newsletters()
+            if result:
+                st.session_state['last_summary'] = result
+                st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                st.success("✅ Résumé automatique généré !")
+                st.rerun()
+    
     # En-tête principal
     st.markdown("""
     <div class="main-header">
@@ -89,7 +99,7 @@ def main():
         # Navigation
         page = st.radio(
             "📋 Menu",
-            ["🏠 Accueil", "📧 Newsletters", "⚙️ Configuration", "📊 Résultats", "❓ Aide"],
+            ["🏠 Accueil", "📧 Newsletters", "⚙️ Configuration", "📊 Résultats", "🤖 Scheduler", "❓ Aide"],
             index=0
         )
     
@@ -102,6 +112,8 @@ def main():
         show_configuration_page()
     elif page == "📊 Résultats":
         show_results_page(newsletter_manager)
+    elif page == "🤖 Scheduler":
+        show_scheduler_page(newsletter_manager)
     elif page == "❓ Aide":
         show_help_page()
 
@@ -276,6 +288,121 @@ def show_results_page(newsletter_manager):
     # Affichage du résumé
     st.markdown("---")
     st.markdown(st.session_state['last_summary'])
+
+def show_scheduler_page(newsletter_manager):
+    """Page de gestion du scheduler"""
+    st.markdown("## 🤖 Gestion du Scheduler")
+    
+    st.info("""
+    📋 **Fonctionnement du scheduler automatique :**
+    
+    - ✅ **Vérification quotidienne** : GitHub Actions exécute le scheduler tous les jours à 09:00 UTC
+    - ✅ **Génération automatique** : Crée les résumés selon votre planification
+    - ✅ **Interface Streamlit** : Application toujours disponible sur Streamlit Cloud
+    - ✅ **Persistance** : Sauvegarde l'historique des exécutions
+    - ✅ **100% Gratuit** : GitHub Actions + Streamlit Cloud
+    """)
+    
+    # Statut du scheduler
+    st.markdown("### 📊 Statut du Scheduler")
+    
+    settings = newsletter_manager.get_user_settings()
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric(
+            label="🔄 Génération automatique",
+            value="✅ Activée" if settings.get('auto_send', False) else "❌ Désactivée"
+        )
+    
+    with col2:
+        st.metric(
+            label="📅 Dernière exécution",
+            value=settings.get('last_run', 'Jamais')
+        )
+    
+    # Test manuel du scheduler
+    st.markdown("### 🧪 Test du Scheduler")
+    
+    if st.button("🚀 Lancer le scheduler maintenant", type="primary"):
+        with st.spinner("🔄 Exécution du scheduler..."):
+            try:
+                # Simuler l'exécution du scheduler
+                if newsletter_manager.should_run_automatically():
+                    result = newsletter_manager.process_newsletters()
+                    if result:
+                        st.success("✅ Scheduler exécuté avec succès !")
+                        st.session_state['last_summary'] = result
+                        st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    else:
+                        st.warning("⚠️ Aucun contenu trouvé pour la période sélectionnée")
+                else:
+                    st.info("ℹ️ Pas encore l'heure d'exécution selon votre planification")
+                    
+            except Exception as e:
+                st.error(f"❌ Erreur lors de l'exécution: {e}")
+    
+    # Configuration GitHub Actions
+    st.markdown("### 🚀 Configuration GitHub Actions")
+    
+    st.markdown("""
+    **Pour activer le scheduler automatique :**
+    
+    1. **Fork ce repository** : Cliquez sur "Fork" en haut à droite
+    2. **Configurer les secrets** : Dans Settings > Secrets and variables > Actions
+    3. **Activer GitHub Actions** : Le workflow se lance automatiquement
+    4. **Vérifier les exécutions** : Dans l'onglet "Actions" de votre repository
+    """)
+    
+    # Secrets GitHub
+    with st.expander("📋 Secrets GitHub à configurer"):
+        st.code("""
+# Dans GitHub > Settings > Secrets and variables > Actions
+# Ajouter ces secrets :
+
+OPENAI_API_KEY=sk-votre-cle-openai
+SECRET_KEY=votre-cle-secrete-32-caracteres
+GOOGLE_CREDENTIALS={"type":"service_account","project_id":"votre-projet",...}
+        """, language="bash")
+        
+        st.info("""
+        💡 **Comment obtenir les secrets :**
+        
+        - **OPENAI_API_KEY** : [platform.openai.com](https://platform.openai.com) > API Keys
+        - **SECRET_KEY** : Générez une clé de 32 caractères aléatoires
+        - **GOOGLE_CREDENTIALS** : Google Cloud Console > Credentials > Télécharger JSON
+        """)
+    
+    # Workflow GitHub Actions
+    with st.expander("🔧 Workflow GitHub Actions"):
+        st.code("""
+# .github/workflows/auto-brief-scheduler.yml
+name: AutoBrief Scheduler
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Tous les jours à 09:00 UTC
+  workflow_dispatch:     # Déclenchement manuel
+
+jobs:
+  auto-brief:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    - name: Run scheduler
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: python scheduler.py
+        """, language="yaml")
 
 def show_help_page():
     """Page d'aide"""

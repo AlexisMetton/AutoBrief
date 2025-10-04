@@ -1,23 +1,35 @@
-# AutoBrief - Veille Automatisée
+# AutoBrief - Veille Automatisée 🤖
 
 > **Automatisez votre veille en intelligence artificielle en analysant vos newsletters et en générant des résumés personnalisés.**
+
+[![Deploy on Streamlit Cloud](https://img.shields.io/badge/Deploy-Streamlit%20Cloud-blue?style=for-the-badge&logo=streamlit)](https://share.streamlit.io)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-green?style=for-the-badge&logo=github)](https://github.com/features/actions)
 
 ## ✨ Fonctionnalités
 
 - 🔐 **Authentification sécurisée** avec Google OAuth2
 - 📧 **Gestion des newsletters** - Ajoutez facilement vos sources
-- 🤖 **IA intégrée** - Extraction automatique des actualités
+- 🤖 **IA intégrée** - Extraction automatique des actualités IA
 - 🔒 **Sécurité maximale** - Chiffrement des données sensibles
 - 📱 **Interface intuitive** - Accessible à tous les utilisateurs
-- 📊 **Résumés personnalisés** - Contenu adapté à vos besoins
+- ⏰ **Automatisation complète** - Résumés générés automatiquement
+- 🚀 **100% Gratuit** - Streamlit Cloud + GitHub Actions
 
-## 🚀 Installation Ultra-Simple
+## 🚀 Installation Ultra-Simple (5 minutes)
 
-### **Option 1 : Déploiement Cloud (RECOMMANDÉ)**
-1. **Fork** ce repository sur GitHub
-2. **Déployez** sur [Streamlit Cloud](https://share.streamlit.io)
-3. **Configurez** vos clés API dans les secrets
-4. **C'est tout !** Votre AutoBrief est prêt
+### **1. Fork le projet**
+[![Fork](https://img.shields.io/badge/Fork-AutoBrief-blue?style=for-the-badge&logo=github)](https://github.com/votre-repo/AutoBrief/fork)
+
+### **2. Déployer sur Streamlit Cloud**
+1. Allez sur [share.streamlit.io](https://share.streamlit.io)
+2. Connectez votre repository GitHub
+3. Cliquez sur "Deploy"
+4. **C'est tout !** Votre application est en ligne
+
+### **3. Configurer l'automatisation (optionnel)**
+1. Dans votre repository forké, allez dans **Settings > Secrets**
+2. Ajoutez vos clés API (voir guide ci-dessous)
+3. **GitHub Actions** se lance automatiquement tous les jours à 09:00 UTC
 
 📖 **Guide complet** : [GUIDE_INSTALLATION_UTILISATEUR.md](GUIDE_INSTALLATION_UTILISATEUR.md)
 

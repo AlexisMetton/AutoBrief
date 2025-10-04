@@ -1,9 +1,3 @@
-# Fichiers sensibles
-.env
-token.json
-credentials.json
-output/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -26,27 +20,37 @@ wheels/
 .installed.cfg
 *.egg
 
-# Environnements virtuels
+# Virtual environments
 venv/
 env/
 ENV/
-env.bak/
-venv.bak/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# User data (sensitive)
+user_data/
+*.json
+!requirements.txt
+!runtime.txt
+
+# Streamlit
+.streamlit/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Streamlit
-.streamlit/
-
 # Logs
 *.log
 
+# Temporary files
+temp_credentials.json

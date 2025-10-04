@@ -9,20 +9,149 @@ import requests
 import re
 from openai import OpenAI
 import time
+import pickle
 
 class NewsletterManager:
     def __init__(self):
         self.config = Config()
         self.auth = SecureAuth()
         self.client = OpenAI(api_key=self.config.get_openai_key())
+        self.data_dir = "user_data"
+        self.user_email = st.session_state.get('user_email', 'default_user')
+        self.user_data_file = os.path.join(self.data_dir, f"{self.user_email.replace('@', '_').replace('.', '_')}.json")
+        
+        # Créer le répertoire de données si nécessaire
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
+    
+    def load_user_data(self):
+        """Charge les données utilisateur depuis le fichier"""
+        try:
+            if os.path.exists(self.user_data_file):
+                with open(self.user_data_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            st.warning(f"⚠️ Erreur lors du chargement des données: {e}")
+        return {
+            'newsletters': [],
+            'settings': {
+                'frequency': 'weekly',
+                'days_to_analyze': 7,
+                'notification_email': '',
+                'last_run': None,
+                'auto_send': False,
+                'schedule_day': 'monday',  # Jour de la semaine
+                'schedule_time': '09:00',  # Heure (UTC)
+                'schedule_timezone': 'UTC'  # Fuseau horaire
+            }
+        }
+    
+    def save_user_data(self, data):
+        """Sauvegarde les données utilisateur dans le fichier"""
+        try:
+            with open(self.user_data_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            st.error(f"❌ Erreur lors de la sauvegarde: {e}")
+            return False
         
     def save_newsletters(self, newsletters):
-        """Sauvegarde la liste des newsletters dans la session"""
+        """Sauvegarde la liste des newsletters dans la session ET sur disque"""
         st.session_state['newsletters'] = newsletters
         
+        # Sauvegarder aussi sur disque
+        user_data = self.load_user_data()
+        user_data['newsletters'] = newsletters
+        self.save_user_data(user_data)
+        
     def get_newsletters(self):
-        """Récupère la liste des newsletters depuis la session"""
-        return st.session_state.get('newsletters', [])
+        """Récupère la liste des newsletters depuis la session ou le disque"""
+        # Essayer d'abord la session
+        newsletters = st.session_state.get('newsletters', [])
+        
+        # Si vide, charger depuis le disque
+        if not newsletters:
+            user_data = self.load_user_data()
+            newsletters = user_data.get('newsletters', [])
+            # Mettre à jour la session
+            if newsletters:
+                st.session_state['newsletters'] = newsletters
+        
+        return newsletters
+    
+    def get_user_settings(self):
+        """Récupère les paramètres utilisateur"""
+        user_data = self.load_user_data()
+        return user_data.get('settings', {
+            'frequency': 'weekly',
+            'days_to_analyze': 7,
+            'notification_email': '',
+            'last_run': None,
+            'auto_send': False
+        })
+    
+    def save_user_settings(self, settings):
+        """Sauvegarde les paramètres utilisateur"""
+        user_data = self.load_user_data()
+        user_data['settings'] = settings
+        return self.save_user_data(user_data)
+    
+    def should_run_automatically(self):
+        """Vérifie si un résumé automatique doit être généré"""
+        settings = self.get_user_settings()
+        
+        if not settings.get('auto_send', False):
+            return False
+        
+        last_run = settings.get('last_run')
+        if not last_run:
+            return True
+        
+        try:
+            last_run_date = datetime.fromisoformat(last_run)
+            frequency = settings.get('frequency', 'weekly')
+            
+            # Vérifier si c'est le bon jour et la bonne heure
+            if not self.is_scheduled_time(settings):
+                return False
+            
+            if frequency == 'daily':
+                return datetime.now() - last_run_date >= timedelta(days=1)
+            elif frequency == 'weekly':
+                return datetime.now() - last_run_date >= timedelta(weeks=1)
+            elif frequency == 'monthly':
+                return datetime.now() - last_run_date >= timedelta(days=30)
+        except:
+            return True
+        
+        return False
+    
+    def is_scheduled_time(self, settings):
+        """Vérifie si c'est le bon jour et la bonne heure pour l'exécution"""
+        try:
+            schedule_day = settings.get('schedule_day', 'monday')
+            schedule_time = settings.get('schedule_time', '09:00')
+            
+            now = datetime.now()
+            current_day = now.strftime('%A').lower()
+            current_time = now.strftime('%H:%M')
+            
+            # Vérifier le jour (pour les fréquences weekly/monthly)
+            if settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
+                if current_day != schedule_day.lower():
+                    return False
+            
+            # Vérifier l'heure (avec une marge de 1 heure pour GitHub Actions)
+            target_hour = int(schedule_time.split(':')[0])
+            current_hour = now.hour
+            
+            # GitHub Actions peut avoir un délai, on accepte +/- 1 heure
+            return abs(current_hour - target_hour) <= 1
+            
+        except Exception as e:
+            st.error(f"Erreur vérification horaire: {e}")
+            return True  # En cas d'erreur, on autorise l'exécution
     
     def add_newsletter(self, email):
         """Ajoute une newsletter à la liste"""
@@ -80,6 +209,114 @@ class NewsletterManager:
                         st.rerun()
         else:
             st.info("ℹ️ Aucune newsletter configurée. Ajoutez-en une ci-dessus.")
+        
+        # Configuration de la planification automatique
+        st.markdown("---")
+        st.markdown("### ⏰ Planification automatique")
+        
+        st.info("""
+        💡 **Comment ça fonctionne :**
+        - GitHub Actions vérifie **toutes les heures** si un résumé doit être généré
+        - Vous pouvez choisir le **jour** (pour hebdomadaire/mensuel) et l'**heure** de votre choix
+        - L'heure est en **UTC** (GitHub Actions fonctionne en UTC)
+        - **Marge de 1 heure** : Le système accepte +/- 1 heure pour la flexibilité
+        """)
+        
+        settings = self.get_user_settings()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            auto_send = st.checkbox(
+                "🔄 Génération automatique",
+                value=settings.get('auto_send', False),
+                help="Active la génération automatique des résumés"
+            )
+            
+            frequency = st.selectbox(
+                "📅 Fréquence",
+                options=['daily', 'weekly', 'monthly'],
+                index=['daily', 'weekly', 'monthly'].index(settings.get('frequency', 'weekly')),
+                format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[x],
+                help="Fréquence de génération des résumés"
+            )
+            
+            # Configuration du jour et de l'heure
+            if frequency in ['weekly', 'monthly']:
+                schedule_day = st.selectbox(
+                    "📆 Jour de la semaine",
+                    options=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+                    index=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].index(settings.get('schedule_day', 'monday')),
+                    format_func=lambda x: {
+                        'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
+                        'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
+                    }[x],
+                    help="Jour de la semaine pour l'envoi du résumé"
+                )
+            else:
+                schedule_day = 'daily'
+            
+            schedule_time = st.time_input(
+                "⏰ Heure d'envoi (UTC)",
+                value=datetime.strptime(settings.get('schedule_time', '09:00'), '%H:%M').time(),
+                help="Heure d'envoi en UTC (GitHub Actions s'exécute à 09:00 UTC par défaut)"
+            )
+        
+        with col2:
+            days_to_analyze = st.slider(
+                "📊 Période d'analyse",
+                min_value=1,
+                max_value=30,
+                value=settings.get('days_to_analyze', 7),
+                help="Nombre de jours à analyser pour chaque résumé"
+            )
+            
+            notification_email = st.text_input(
+                "📧 Email de notification",
+                value=settings.get('notification_email', ''),
+                placeholder="votre.email@example.com",
+                help="Email pour recevoir les résumés automatiques (optionnel)"
+            )
+        
+        # Sauvegarder les paramètres
+        if st.button("💾 Sauvegarder les paramètres", type="primary"):
+            new_settings = {
+                'auto_send': auto_send,
+                'frequency': frequency,
+                'days_to_analyze': days_to_analyze,
+                'notification_email': notification_email,
+                'last_run': settings.get('last_run'),
+                'schedule_day': schedule_day,
+                'schedule_time': schedule_time.strftime('%H:%M'),
+                'schedule_timezone': 'UTC'
+            }
+            
+            if self.save_user_settings(new_settings):
+                st.success("✅ Paramètres sauvegardés !")
+                st.rerun()
+            else:
+                st.error("❌ Erreur lors de la sauvegarde")
+        
+        # Statut de la planification
+        if auto_send:
+            frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[frequency]
+            if frequency in ['weekly', 'monthly']:
+                day_text = {
+                    'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
+                    'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
+                }[schedule_day]
+                schedule_text = f"{day_text} à {schedule_time.strftime('%H:%M')} UTC"
+            else:
+                schedule_text = f"Tous les jours à {schedule_time.strftime('%H:%M')} UTC"
+            
+            st.info(f"""
+            🔄 **Résumé automatique activé**
+            - 📅 Fréquence : {frequency_text}
+            - ⏰ Planifié : {schedule_text}
+            - 📊 Dernière exécution : {settings.get('last_run', 'Jamais')}
+            """)
+        else:
+            st.warning("⚠️ Résumé automatique désactivé")
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
@@ -215,5 +452,15 @@ class NewsletterManager:
             
             progress_bar.progress((idx + 1) / len(messages))
         
+        # Mettre à jour la date de dernière exécution
+        if output:
+            self.update_last_run()
+        
         return output
+    
+    def update_last_run(self):
+        """Met à jour la date de dernière exécution"""
+        settings = self.get_user_settings()
+        settings['last_run'] = datetime.now().isoformat()
+        self.save_user_settings(settings)
 

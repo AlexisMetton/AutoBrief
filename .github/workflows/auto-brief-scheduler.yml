@@ -1,0 +1,42 @@
+name: AutoBrief Scheduler
+
+# Exécute toutes les heures pour vérifier les planifications
+on:
+  schedule:
+    - cron: '0 * * * *'  # Toutes les heures
+  # Permet aussi de déclencher manuellement
+  workflow_dispatch:
+
+jobs:
+  auto-brief:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run AutoBrief Scheduler
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        python scheduler.py
+        
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: scheduler-results-${{ github.run_number }}
+        path: scheduler_results.log
+        retention-days: 7
