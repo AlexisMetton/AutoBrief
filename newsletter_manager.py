@@ -50,19 +50,26 @@ class NewsletterManager:
                 """)
                 return False
             
-            # Vérifier que le Gist existe et est accessible
-            import requests
-            response = requests.get(f'https://api.github.com/gists/{gist_id}')
+            # Vérifier si un token Gist est configuré
+            gist_token = None
+            try:
+                if hasattr(st, 'secrets') and 'GIST_TOKEN' in st.secrets:
+                    gist_token = st.secrets['GIST_TOKEN']
+            except:
+                pass
             
-            if response.status_code == 200:
-                st.success("✅ Gist partagé configuré et accessible !")
+            if gist_token:
+                st.success("✅ Gist partagé configuré avec token (sauvegarde automatique) !")
                 return True
-            elif response.status_code == 404:
-                st.error(f"❌ Gist non trouvé: {gist_id}")
-                st.info("Vérifiez que l'ID du Gist est correct dans les secrets Streamlit")
-                return False
             else:
-                st.error(f"❌ Erreur lors de l'accès au Gist: {response.status_code}")
+                st.warning("""
+                ⚠️ **Token Gist manquant**
+                
+                Pour la sauvegarde automatique :
+                1. Créez un token GitHub avec le scope `gist`
+                2. Ajoutez-le dans les secrets Streamlit : `GIST_TOKEN`
+                3. La sauvegarde sera automatique
+                """)
                 return False
                 
         except Exception as e:
@@ -210,8 +217,8 @@ class NewsletterManager:
             if self.save_to_github_gist(data):
                 return True
             
-            # Fallback sur fichier local si GitHub Gist échoue
-            return self.save_to_local_file(data)
+            # Pas de fallback - sauvegarde Gist obligatoire
+            return False
             
         except Exception as e:
             pass
@@ -290,21 +297,15 @@ class NewsletterManager:
                         st.info("Vérifiez que le token Gist est correct dans les secrets")
                         return False
                 else:
-                    # Pas de token Gist - sauvegarde en session
+                    # Pas de token Gist - sauvegarde en session uniquement
                     st.warning("""
-                    ⚠️ **Sauvegarde en session uniquement**
+                    ⚠️ **Token Gist manquant**
                     
-                    Aucun token Gist configuré. Pour la sauvegarde automatique :
+                    Pour la sauvegarde automatique :
                     1. Créez un token GitHub avec le scope `gist`
                     2. Ajoutez-le dans les secrets Streamlit : `GIST_TOKEN`
-                    3. Ou copiez les données ci-dessous manuellement
+                    3. La sauvegarde sera automatique
                     """)
-                    
-                    # Afficher les données à copier
-                    st.code(f"""
-# Copiez ceci dans votre Gist user_data.json :
-{json.dumps(all_users_data, indent=2, ensure_ascii=False)}
-                    """, language="json")
                     
                     return False
                 
@@ -321,17 +322,6 @@ class NewsletterManager:
             return False
     
     
-    def save_to_local_file(self, data):
-        """Sauvegarde dans un fichier local (fallback)"""
-        try:
-            os.makedirs(self.data_dir, exist_ok=True)
-            
-            with open(self.user_data_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            
-            return True
-        except:
-            return False
         
     def save_newsletters(self, newsletters):
         """Sauvegarde la liste des newsletters dans la session ET sur disque"""
