@@ -10,6 +10,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from email.mime.text import MIMEText
 
 # Configuration du logging
 logging.basicConfig(
@@ -99,23 +100,45 @@ class AutoBriefScheduler:
     def send_email(self, to_email, subject, content):
         """Envoie un email via Gmail API"""
         try:
-            # Utiliser Gmail API pour envoyer l'email
             from google.auth.transport.requests import Request
             from google.oauth2.credentials import Credentials
             from googleapiclient.discovery import build
             import base64
             
-            # Pour l'envoi d'email, on peut utiliser les credentials OAuth existants
-            # ou configurer un service account pour l'envoi
-            print(f"📧 Email à envoyer à {to_email}: {subject}")
-            print(f"Contenu: {content[:100]}...")
+            # Récupérer les credentials depuis les secrets GitHub
+            google_credentials = os.getenv('GOOGLE_CREDENTIALS')
+            if not google_credentials:
+                self.logger.error("❌ GOOGLE_CREDENTIALS non trouvé dans les secrets GitHub")
+                return False
             
-            # Pour l'instant, on log l'email au lieu de l'envoyer
-            # Dans une vraie implémentation, on utiliserait Gmail API
+            # Charger les credentials
+            import json
+            credentials_info = json.loads(google_credentials)
+            credentials = Credentials.from_authorized_user_info(credentials_info)
+            
+            # Créer le service Gmail
+            service = build('gmail', 'v1', credentials=credentials)
+            
+            # Créer le message
+            message = MIMEText(content, 'html')
+            message['to'] = to_email
+            message['subject'] = subject
+            message['from'] = credentials_info.get('email', 'noreply@autobrief.com')
+            
+            # Encoder le message
+            raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+            
+            # Envoyer l'email
+            result = service.users().messages().send(
+                userId='me',
+                body={'raw': raw_message}
+            ).execute()
+            
+            self.logger.info(f"✅ Email envoyé à {to_email} - Message ID: {result['id']}")
             return True
             
         except Exception as e:
-            print(f"❌ Erreur envoi email: {e}")
+            self.logger.error(f"❌ Erreur envoi email: {e}")
             return False
     
     def process_user_newsletters(self, user_info):
@@ -140,10 +163,25 @@ class AutoBriefScheduler:
             summary = f"Résumé automatique généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}"
             self.logger.info(f"📄 {summary}")
             
-            # En mode GitHub Actions, on simule l'envoi d'email
+            # Envoyer l'email de résumé
             notification_email = user_info['settings'].get('notification_email')
             if notification_email and notification_email.strip():
-                self.logger.info(f"📧 Email de résumé envoyé à {notification_email}")
+                subject = f"📧 Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
+                content = f"""
+                <h2>📧 Résumé de vos newsletters</h2>
+                <p>Bonjour,</p>
+                <p>Voici votre résumé automatique généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')} :</p>
+                <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px;">
+                    {summary}
+                </div>
+                <p>---</p>
+                <p><em>Généré automatiquement par AutoBrief</em></p>
+                """
+                
+                if self.send_email(notification_email, subject, content):
+                    self.logger.info(f"✅ Email de résumé envoyé à {notification_email}")
+                else:
+                    self.logger.error(f"❌ Échec envoi email à {notification_email}")
             else:
                 self.logger.warning(f"⚠️ Aucune adresse email de notification configurée pour {user_info['email']}")
             
