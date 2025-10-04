@@ -163,10 +163,16 @@ class AutoBriefScheduler:
             import subprocess
             
             # Définir les variables d'environnement pour le script
+            # Sauvegarder le contenu dans un fichier temporaire
+            temp_content_file = 'temp_email_content.html'
+            with open(temp_content_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # Préparer les variables d'environnement pour le script
             env = os.environ.copy()
             env['TO_EMAIL'] = to_email
             env['SUBJECT'] = subject
-            env['CONTENT'] = content
+            env['CONTENT_FILE'] = temp_content_file
             
             self.logger.info(f"📧 Envoi email pour {to_email}")
             self.logger.info(f"📧 Sujet: {subject}")

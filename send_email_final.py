@@ -119,11 +119,27 @@ def main():
     # Récupérer les paramètres depuis les variables d'environnement
     to_email = os.getenv('TO_EMAIL', '')
     subject = os.getenv('SUBJECT', '')
-    content = os.getenv('CONTENT', '')
+    content_file = os.getenv('CONTENT_FILE', '')
+    
+    # Lire le contenu depuis le fichier
+    content = ''
+    if content_file and os.path.exists(content_file):
+        try:
+            with open(content_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            # Nettoyer le fichier temporaire
+            os.remove(content_file)
+        except Exception as e:
+            logger.error(f"❌ Erreur lecture fichier contenu: {e}")
+            return
+    else:
+        # Fallback: essayer de récupérer depuis CONTENT (ancienne méthode)
+        content = os.getenv('CONTENT', '')
     
     # Debug: afficher le contenu reçu
     logger.info(f"📧 TO_EMAIL: {to_email}")
     logger.info(f"📧 SUBJECT: {subject}")
+    logger.info(f"📧 CONTENT_FILE: {content_file}")
     logger.info(f"📧 CONTENT (premiers 200 caractères): {content[:200] if content else 'VIDE'}")
     logger.info(f"📧 CONTENT (longueur): {len(content) if content else 0}")
     
