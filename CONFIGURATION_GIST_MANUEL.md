@@ -19,8 +19,10 @@ Pour éviter les erreurs d'authentification, nous allons créer le Gist manuelle
    ```json
    {}
    ```
-4. **Visibilité** : **Privé** (recommandé)
-5. **Cliquez** sur "Create public gist" ou "Create secret gist"
+4. **Visibilité** : **Public** (recommandé pour la sauvegarde)
+5. **Cliquez** sur "Create public gist"
+
+**⚠️ Important :** Un Gist **public** est nécessaire pour permettre la sauvegarde automatique sans authentification.
 
 #### **Récupérer l'ID du Gist :**
 - **URL du Gist** : `https://gist.github.com/abc123def456`
@@ -44,12 +46,19 @@ GOOGLE_CREDENTIALS = '{"type":"service_account",...}'
 GIST_ID = "abc123def456"  # ← Même ID du Gist
 ```
 
-### **3. Vérifier la configuration :**
+### **3. Si vous avez créé un Gist privé par erreur :**
 
-#### **Au démarrage de l'application :**
+#### **Rendre le Gist public :**
+1. **Allez** sur votre Gist (URL avec l'ID)
+2. **Cliquez** sur "Edit" (bouton en haut à droite)
+3. **Cochez** "Public" (au lieu de "Secret")
+4. **Cliquez** sur "Update public gist"
+
+#### **Vérifier la configuration :**
 - ✅ **"Gist partagé configuré et accessible !"** → Configuration OK
 - ❌ **"Gist non trouvé"** → Vérifiez l'ID dans les secrets
 - ❌ **"Gist partagé non configuré"** → Ajoutez le secret `GIST_ID`
+- ⚠️ **"Gist privé - Sauvegarde limitée"** → Rendez le Gist public
 
 ## 🔧 **Fonctionnement :**
 

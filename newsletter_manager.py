@@ -251,16 +251,34 @@ class NewsletterManager:
                     }
                 }
                 
-                # Utiliser l'API GitHub sans authentification (lecture seule)
-                # Pour l'écriture, il faudrait un token GitHub
-                st.warning("""
-                ⚠️ **Mise à jour du Gist non autorisée**
+                # Essayer de mettre à jour le Gist (fonctionne avec les Gists publics)
+                update_response = requests.patch(
+                    f'https://api.github.com/gists/{gist_id}',
+                    json=update_data,
+                    headers={'Accept': 'application/vnd.github.v3+json'}
+                )
                 
-                Le Gist est en lecture seule. Pour permettre la sauvegarde :
-                1. Le développeur doit configurer un token GitHub
-                2. Ou utiliser un Gist public en lecture seule
-                """)
-                return False
+                if update_response.status_code == 200:
+                    st.success("✅ Données sauvegardées dans le Gist partagé !")
+                    return True
+                elif update_response.status_code == 403:
+                    st.warning("""
+                    ⚠️ **Gist privé - Sauvegarde limitée**
+                    
+                    Le Gist est privé. Pour permettre la sauvegarde :
+                    1. **Option 1** : Rendez le Gist public (recommandé)
+                    2. **Option 2** : Configurez un token GitHub
+                    
+                    **Pour rendre le Gist public :**
+                    1. Allez sur votre Gist
+                    2. Cliquez sur "Edit"
+                    3. Cochez "Public"
+                    4. Sauvegardez
+                    """)
+                    return False
+                else:
+                    st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                    return False
                 
             elif response.status_code == 404:
                 st.error(f"❌ Gist non trouvé: {gist_id}")
