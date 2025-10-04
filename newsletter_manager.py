@@ -288,9 +288,11 @@ class NewsletterManager:
         
     def save_newsletters(self, newsletters):
         """Sauvegarde la liste des newsletters dans le Gist"""
+        print(f"DEBUG: save_newsletters appelé avec newsletters: {newsletters}")
         # Mettre à jour les données utilisateur complètes
         user_data = self.load_user_data()
         user_data['newsletters'] = newsletters
+        print(f"DEBUG: save_newsletters - user_data: {user_data}")
         self.save_user_data(user_data)
         
     def get_newsletters(self):
@@ -312,8 +314,10 @@ class NewsletterManager:
     
     def save_user_settings(self, settings):
         """Sauvegarde les paramètres utilisateur"""
+        print(f"DEBUG: save_user_settings appelé avec settings: {settings}")
         user_data = self.load_user_data()
         user_data['settings'] = settings
+        print(f"DEBUG: save_user_settings - user_data: {user_data}")
         return self.save_user_data(user_data)
     
     def should_run_automatically(self):
