@@ -173,7 +173,7 @@ class AutoBriefScheduler:
                 return False
             
             # Construire l'URL de l'API
-            api_url = f"{streamlit_url}/🔌%20API"
+            api_url = f"{streamlit_url}/api"
             
             # Paramètres de la requête
             params = {

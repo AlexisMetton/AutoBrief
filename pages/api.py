@@ -40,12 +40,12 @@ st.markdown("## 📚 Documentation API")
 st.markdown("""
 ### **Endpoint : Envoi d'email**
 ```
-GET https://votre-app.streamlit.app/🔌%20API?action=send_email&api_key=YOUR_API_KEY&user_email=user@example.com&subject=Test&content=Contenu
+GET https://votre-app.streamlit.app/api?action=send_email&api_key=YOUR_API_KEY&user_email=user@example.com&subject=Test&content=Contenu
 ```
 
 ### **Endpoint : Traitement des newsletters**
 ```
-GET https://votre-app.streamlit.app/🔌%20API?action=process_newsletters&api_key=YOUR_API_KEY&user_email=user@example.com
+GET https://votre-app.streamlit.app/api?action=process_newsletters&api_key=YOUR_API_KEY&user_email=user@example.com
 ```
 """)
 

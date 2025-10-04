@@ -116,7 +116,7 @@ def main():
         show_scheduler_page(newsletter_manager)
     elif page == "🔌 API":
         st.info("🔌 Redirection vers la page API...")
-        st.markdown("### [Ouvrir la page API](/🔌%20API)")
+        st.markdown("### [Ouvrir la page API](/api)")
     elif page == "❓ Aide":
         show_help_page()
 
