@@ -381,6 +381,23 @@ def show_scheduler_page(newsletter_manager):
                     st.error(f"❌ Erreur: {e}")
             else:
                 st.warning("⚠️ Veuillez d'abord configurer une adresse email de notification")
+        
+        # Bouton temporaire pour afficher les credentials OAuth2
+        if st.button("🔑 Afficher credentials OAuth2 (pour GitHub Actions)", type="secondary"):
+            try:
+                # Lire le fichier token.json
+                token_file = "token.json"
+                if os.path.exists(token_file):
+                    with open(token_file, 'r') as f:
+                        token_content = f.read()
+                    
+                    st.success("✅ Fichier token.json trouvé !")
+                    st.code(token_content, language="json")
+                    st.info("📋 Copiez ce contenu dans le secret GitHub 'GOOGLE_CREDENTIALS'")
+                else:
+                    st.warning("⚠️ Fichier token.json non trouvé. Connectez-vous d'abord avec Google.")
+            except Exception as e:
+                st.error(f"❌ Erreur lors de la lecture du fichier token.json: {e}")
     
     # Configuration GitHub Actions
     st.markdown("### 🚀 Configuration GitHub Actions")

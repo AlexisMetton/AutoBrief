@@ -34,12 +34,16 @@ def send_email_final(to_email, subject, content):
         
         # Debug: afficher les champs disponibles
         logger.info(f"🔍 Champs disponibles dans credentials: {list(credentials_info.keys())}")
-        logger.info(f"🔍 Token présent: {'token' in credentials_info}")
-        logger.info(f"🔍 Refresh token présent: {'refresh_token' in credentials_info}")
-        logger.info(f"🔍 Client ID présent: {'client_id' in credentials_info}")
-        logger.info(f"🔍 Client secret présent: {'client_secret' in credentials_info}")
         
-        # Créer le service Gmail
+        # Vérifier si c'est un fichier de credentials d'application ou d'utilisateur
+        if 'installed' in credentials_info:
+            # Credentials d'application - on a besoin des credentials OAuth2 de l'utilisateur
+            logger.error("❌ GOOGLE_CREDENTIALS contient les credentials d'application, pas les credentials OAuth2 de l'utilisateur")
+            logger.error("❌ Pour GitHub Actions, vous devez utiliser les credentials OAuth2 de l'utilisateur")
+            logger.error("❌ Récupérez le fichier token.json après authentification dans l'application Streamlit")
+            return False
+        
+        # Créer le service Gmail avec les credentials OAuth2 de l'utilisateur
         from google.oauth2.credentials import Credentials
         from google.auth.transport.requests import Request
         from googleapiclient.discovery import build
