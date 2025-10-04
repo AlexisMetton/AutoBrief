@@ -235,6 +235,7 @@ class NewsletterManager:
             
             if gist_token:
                 print(f"DEBUG: Token trouvé - {gist_token[:10]}...")
+                print(f"DEBUG: Token complet - {gist_token}")
                 # Utiliser le token GitHub pour l'authentification
                 headers = {
                     'Accept': 'application/vnd.github.v3+json',
@@ -243,6 +244,7 @@ class NewsletterManager:
                 print(f"DEBUG: Headers - {headers}")
             else:
                 print("DEBUG: Aucun token GIST_TOKEN trouvé")
+                st.error("❌ Token GIST_TOKEN manquant dans les secrets Streamlit")
                 return False
             
             if gist_token:
