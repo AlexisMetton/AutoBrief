@@ -13,13 +13,61 @@ import pickle
 
 class NewsletterManager:
     def __init__(self):
+        print(f"DEBUG: NewsletterManager.__init__ appelé")
         self.config = Config()
         self.auth = SecureAuth()
         self.client = OpenAI(api_key=self.config.get_openai_key())
         self.user_email = st.session_state.get('user_email', 'default_user')
+        print(f"DEBUG: NewsletterManager.__init__ - user_email: {self.user_email}")
+        
+        # Détecter automatiquement la reconnexion
+        self._detect_reconnection()
         
         # Vérifier la configuration du Gist au démarrage
         self.check_gist_configuration()
+    
+    def _detect_reconnection(self):
+        """Détecte automatiquement la reconnexion et recharge les données"""
+        try:
+            current_email = st.session_state.get('user_email', 'default_user')
+            last_email = st.session_state.get('last_user_email', None)
+            
+            print(f"DEBUG: _detect_reconnection - current_email: {current_email}, last_email: {last_email}")
+            
+            # Si l'email a changé, c'est une reconnexion
+            if current_email != last_email and current_email != 'default_user':
+                print(f"DEBUG: Reconnexion détectée - rechargement automatique des données")
+                
+                # Vider le cache des données
+                if 'user_data_cache' in st.session_state:
+                    del st.session_state['user_data_cache']
+                
+                # Mettre à jour l'email en session
+                st.session_state['last_user_email'] = current_email
+                
+                # Recharger automatiquement les données
+                self._auto_reload_data()
+                
+        except Exception as e:
+            print(f"DEBUG: Erreur dans _detect_reconnection: {e}")
+    
+    def _auto_reload_data(self):
+        """Recharge automatiquement les données depuis le Gist"""
+        try:
+            print(f"DEBUG: _auto_reload_data - rechargement automatique pour {self.user_email}")
+            
+            # Forcer le rechargement depuis le Gist
+            data = self.load_from_github_gist()
+            if data:
+                print(f"DEBUG: _auto_reload_data - données rechargées: {data}")
+                # Mettre à jour la session avec les nouvelles données
+                st.session_state['user_data_cache'] = data
+                st.success("✅ Données automatiquement rechargées depuis le Gist !")
+            else:
+                print(f"DEBUG: _auto_reload_data - aucune donnée trouvée dans le Gist")
+                
+        except Exception as e:
+            print(f"DEBUG: Erreur dans _auto_reload_data: {e}")
     
     def check_gist_configuration(self):
         """Vérifie la configuration du Gist au démarrage"""
@@ -73,13 +121,25 @@ class NewsletterManager:
     def load_user_data(self):
         """Charge les données utilisateur depuis le Gist uniquement"""
         try:
-            # Charger uniquement depuis le Gist
+            print(f"DEBUG: load_user_data appelé pour {self.user_email}")
+            
+            # Vérifier d'abord le cache en session
+            if 'user_data_cache' in st.session_state:
+                cached_data = st.session_state['user_data_cache']
+                print(f"DEBUG: load_user_data - données trouvées dans le cache: {cached_data}")
+                return cached_data
+            
+            # Si pas de cache, charger depuis le Gist
             data = self.load_from_github_gist()
             if data:
+                print(f"DEBUG: load_user_data - données trouvées dans le Gist: {data}")
+                # Mettre en cache
+                st.session_state['user_data_cache'] = data
                 return data
             else:
+                print(f"DEBUG: load_user_data - aucune donnée trouvée, retour des données par défaut")
                 # Pas de données dans le Gist - retourner des données par défaut
-                return {
+                default_data = {
                     'newsletters': [],
                     'settings': {
                         'frequency': 'weekly',
@@ -92,6 +152,9 @@ class NewsletterManager:
                         'schedule_timezone': 'UTC'
                     }
                 }
+                # Mettre en cache les données par défaut
+                st.session_state['user_data_cache'] = default_data
+                return default_data
                     
         except Exception as e:
             # En cas d'erreur, retourner des données par défaut
