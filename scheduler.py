@@ -171,9 +171,9 @@ class AutoBriefScheduler:
             self.logger.info(f"📧 Envoi email pour {to_email}")
             self.logger.info(f"📧 Sujet: {subject}")
             
-            # Exécuter le script d'envoi d'email
+            # Exécuter le script d'envoi d'email standalone
             result = subprocess.run(
-                ['python', 'send_email.py'],
+                ['python', 'send_email_standalone.py'],
                 env=env,
                 capture_output=True,
                 text=True,
