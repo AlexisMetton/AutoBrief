@@ -10,59 +10,34 @@ import json
 import requests
 from datetime import datetime
 
-def send_email_via_streamlit(to_email, subject, content):
-    """Envoie un email via l'application Streamlit"""
+def send_email_direct(to_email, subject, content):
+    """Envoie un email directement via les modules AutoBrief"""
     
     try:
-        # URL de votre application Streamlit
-        streamlit_url = "https://alexismetton.streamlit.app"
+        print(f"📧 Envoi email direct pour {to_email}")
+        print(f"📧 Sujet: {subject}")
         
-        # Récupérer la clé API depuis les variables d'environnement
-        api_key = os.getenv('API_KEY')
-        if not api_key:
-            print(f"❌ API_KEY non trouvé dans les variables d'environnement")
-            return False
+        # Importer les modules nécessaires
+        from newsletter_manager import NewsletterManager
+        import streamlit as st
         
-        # Construire l'URL de l'API
-        api_url = f"{streamlit_url}/api"
+        # Simuler une session utilisateur
+        st.session_state['user_email'] = to_email
+        st.session_state['authenticated'] = True
         
-        # Paramètres de la requête
-        params = {
-            'action': 'send_email',
-            'api_key': api_key,
-            'user_email': to_email,
-            'subject': subject,
-            'content': content
-        }
+        # Créer l'instance NewsletterManager
+        newsletter_manager = NewsletterManager()
         
-        print(f"📧 Envoi email via API Streamlit pour {to_email}")
-        print(f"📧 URL: {api_url}")
+        # Envoyer l'email
+        success = newsletter_manager.send_summary_email(content, to_email)
         
-        # Faire l'appel API
-        response = requests.get(api_url, params=params, timeout=30)
-        
-        print(f"📧 Status Code: {response.status_code}")
-        print(f"📧 Response: {response.text}")
-        
-        if response.status_code == 200:
-            try:
-                result = response.json()
-                if result.get('status') == 200:
-                    print(f"✅ Email envoyé avec succès à {to_email}")
-                    return True
-                else:
-                    print(f"❌ Erreur API: {result.get('error', 'Erreur inconnue')}")
-                    return False
-            except json.JSONDecodeError:
-                print(f"❌ Réponse non-JSON reçue: {response.text}")
-                return False
+        if success:
+            print(f"✅ Email envoyé avec succès à {to_email}")
+            return True
         else:
-            print(f"❌ Erreur HTTP {response.status_code}: {response.text}")
+            print(f"❌ Erreur lors de l'envoi de l'email")
             return False
         
-    except requests.exceptions.Timeout:
-        print("❌ Timeout lors de l'appel API")
-        return False
     except Exception as e:
         print(f"❌ Erreur envoi email: {e}")
         return False
@@ -80,7 +55,7 @@ def main():
         return
     
     # Envoyer l'email
-    success = send_email_via_streamlit(to_email, subject, content)
+    success = send_email_direct(to_email, subject, content)
     
     if success:
         print("✅ Email envoyé avec succès !")
