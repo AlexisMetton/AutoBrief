@@ -3,7 +3,7 @@ name: AutoBrief Scheduler
 # Exécute toutes les heures pour vérifier les planifications
 on:
   schedule:
-    - cron: '0 * * * *'  # Toutes les heures
+    - cron: '0 * * * *'  # Toutes les heures à l'heure pile
   # Permet aussi de déclencher manuellement
   workflow_dispatch:
 

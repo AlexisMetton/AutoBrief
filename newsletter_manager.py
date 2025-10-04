@@ -352,12 +352,15 @@ class NewsletterManager:
                 if current_day != schedule_day.lower():
                     return False
             
-            # Vérifier l'heure (avec une marge de 1 heure pour GitHub Actions)
+            # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
             target_hour = int(schedule_time.split(':')[0])
+            target_minute = int(schedule_time.split(':')[1])
             current_hour = now.hour
+            current_minute = now.minute
             
-            # GitHub Actions peut avoir un délai, on accepte +/- 1 heure
-            return abs(current_hour - target_hour) <= 1
+            # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
+            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
+            return time_diff <= 30
             
         except Exception as e:
             st.error(f"Erreur vérification horaire: {e}")
