@@ -164,8 +164,10 @@ class NewsletterManager:
     def save_user_data(self, data):
         """Sauvegarde les données utilisateur directement dans le Gist"""
         try:
+            print(f"DEBUG: save_user_data appelé avec data: {data}")
             # Sauvegarder directement dans le Gist
             success = self.save_to_github_gist(data)
+            print(f"DEBUG: save_to_github_gist retourne: {success}")
             
             if success:
                 st.success("✅ Données sauvegardées automatiquement !")
