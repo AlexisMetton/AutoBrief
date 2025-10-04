@@ -353,10 +353,24 @@ class AutoBriefScheduler:
                                         return None
                                     
                                     self.logger.info(f"🔧 SECRET_KEY trouvée: {secret_key[:10]}...")
+                                    self.logger.info(f"🔧 SECRET_KEY complète: {secret_key}")
                                     
                                     # Générer la clé Fernet (même méthode que dans config.py)
                                     key = base64.urlsafe_b64encode(secret_key.encode()[:32].ljust(32, b'0'))
                                     fernet = Fernet(key)
+                                    
+                                    # Test de l'algorithme avec des données de test
+                                    try:
+                                        test_data = {"test": "data"}
+                                        test_encrypted = fernet.encrypt(json.dumps(test_data).encode())
+                                        test_decrypted = fernet.decrypt(test_encrypted)
+                                        test_result = json.loads(test_decrypted.decode())
+                                        if test_result == test_data:
+                                            self.logger.info(f"✅ Test de chiffrement/déchiffrement réussi")
+                                        else:
+                                            self.logger.error(f"❌ Test de chiffrement/déchiffrement échoué")
+                                    except Exception as test_error:
+                                        self.logger.error(f"❌ Erreur test de chiffrement: {test_error}")
                                     
                                     # Déchiffrer les credentials
                                     encrypted_data = oauth_creds['_encrypted_data']
@@ -364,18 +378,46 @@ class AutoBriefScheduler:
                                     self.logger.info(f"🔧 Données chiffrées (premiers 50 caractères): {encrypted_data[:50]}...")
                                     self.logger.info(f"🔧 Longueur des données chiffrées: {len(encrypted_data)}")
                                     
+                                    # Vérifier si les données sont valides
+                                    if len(encrypted_data) < 100:
+                                        self.logger.error(f"❌ Données chiffrées trop courtes: {len(encrypted_data)} caractères")
+                                        return None
+                                    
+                                    # Vérifier le format base64
+                                    import re
+                                    if not re.match(r'^[A-Za-z0-9+/]*={0,2}$', encrypted_data):
+                                        self.logger.error(f"❌ Format base64 invalide")
+                                        return None
+                                    
                                     # Vérifier le format des données chiffrées
                                     try:
                                         # Essayer de décoder base64 d'abord
                                         import base64
                                         decoded_data = base64.b64decode(encrypted_data)
                                         self.logger.info(f"🔧 Données base64 décodées avec succès, longueur: {len(decoded_data)}")
+                                        
+                                        # Vérifier le format Fernet
+                                        self.logger.info(f"🔧 Premiers bytes décodés: {decoded_data[:20].hex()}")
+                                        
                                     except Exception as base64_error:
                                         self.logger.error(f"❌ Erreur décodage base64: {base64_error}")
                                         return None
                                     
-                                    decrypted_data = fernet.decrypt(encrypted_data.encode())
-                                    self.logger.info(f"🔧 Données déchiffrées avec succès, longueur: {len(decrypted_data)}")
+                                    # Essayer de déchiffrer avec différentes méthodes
+                                    try:
+                                        # Méthode 1: Direct
+                                        decrypted_data = fernet.decrypt(encrypted_data.encode())
+                                        self.logger.info(f"🔧 Déchiffrement direct réussi, longueur: {len(decrypted_data)}")
+                                    except Exception as decrypt_error:
+                                        self.logger.error(f"❌ Erreur déchiffrement direct: {decrypt_error}")
+                                        
+                                        # Méthode 2: Avec données pré-décodées
+                                        try:
+                                            decrypted_data = fernet.decrypt(decoded_data)
+                                            self.logger.info(f"🔧 Déchiffrement avec données pré-décodées réussi")
+                                        except Exception as decrypt_error2:
+                                            self.logger.error(f"❌ Erreur déchiffrement avec données pré-décodées: {decrypt_error2}")
+                                            return None
                                     
                                     decrypted_creds = json.loads(decrypted_data.decode())
                                     self.logger.info(f"🔧 JSON parsé avec succès")

@@ -45,6 +45,11 @@ class SecureAuth:
     def encrypt_token(self, token_data):
         """Chiffre les données du token"""
         try:
+            # Debug: afficher la SECRET_KEY utilisée pour le chiffrement
+            secret_key = self.config.get_secret_key()
+            if hasattr(st, 'info'):
+                st.info(f"🔧 SECRET_KEY utilisée pour chiffrement: {secret_key[:10]}...")
+            
             json_data = json.dumps(token_data)
             encrypted_data = self.encryption.encrypt(json_data.encode())
             return base64.b64encode(encrypted_data).decode()
