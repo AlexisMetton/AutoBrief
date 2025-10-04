@@ -70,14 +70,37 @@ class NewsletterManager:
             # Toujours sauvegarder dans la session state pour la persistance
             st.session_state['user_data_cache'] = data
             
-            # Essayer de sauvegarder sur disque si possible (développement local)
+            # Essayer de sauvegarder sur disque pour GitHub Actions
             try:
+                # Créer le répertoire s'il n'existe pas
+                os.makedirs(self.data_dir, exist_ok=True)
+                
                 with open(self.user_data_file, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
+                    
+                # Aussi sauvegarder dans un fichier global pour GitHub Actions
+                global_data_file = os.path.join(self.data_dir, 'all_users_data.json')
+                
+                # Charger les données globales existantes
+                all_users_data = {}
+                if os.path.exists(global_data_file):
+                    try:
+                        with open(global_data_file, 'r', encoding='utf-8') as f:
+                            all_users_data = json.load(f)
+                    except:
+                        all_users_data = {}
+                
+                # Ajouter/mettre à jour les données de cet utilisateur
+                all_users_data[self.user_email] = data
+                
+                # Sauvegarder les données globales
+                with open(global_data_file, 'w', encoding='utf-8') as f:
+                    json.dump(all_users_data, f, indent=2, ensure_ascii=False)
+                    
             except Exception as disk_error:
                 # Sur Streamlit Cloud, on ne peut pas écrire sur disque
                 # C'est normal, on continue avec la session state seulement
-                pass
+                st.warning(f"⚠️ Impossible de sauvegarder sur disque: {disk_error}")
             
             return True
         except Exception as e:

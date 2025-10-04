@@ -36,27 +36,31 @@ class AutoBriefScheduler:
     def get_all_users(self):
         """Récupère tous les utilisateurs ayant des données sauvegardées"""
         users = []
-        if not os.path.exists(self.data_dir):
+        global_data_file = os.path.join(self.data_dir, 'all_users_data.json')
+        
+        if not os.path.exists(global_data_file):
+            self.logger.info("Fichier de données global non trouvé")
             return users
+        
+        try:
+            with open(global_data_file, 'r', encoding='utf-8') as f:
+                all_users_data = json.load(f)
             
-        for file_path in Path(self.data_dir).glob("*.json"):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    user_data = json.load(f)
-                    settings = user_data.get('settings', {})
-                    
-                    # Vérifier si l'utilisateur a activé l'envoi automatique
-                    if settings.get('auto_send', False):
-                        user_email = file_path.stem.replace('_', '.').replace('..', '@')
-                        users.append({
-                            'email': user_email,
-                            'file_path': str(file_path),
-                            'settings': settings,
-                            'newsletters': user_data.get('newsletters', [])
-                        })
-            except Exception as e:
-                print(f"Erreur lecture fichier {file_path}: {e}")
+            for user_email, user_data in all_users_data.items():
+                settings = user_data.get('settings', {})
                 
+                # Vérifier si l'utilisateur a activé l'envoi automatique
+                if settings.get('auto_send', False):
+                    users.append({
+                        'email': user_email,
+                        'file_path': global_data_file,
+                        'settings': settings,
+                        'newsletters': user_data.get('newsletters', [])
+                    })
+                    
+        except Exception as e:
+            self.logger.error(f"Erreur lors du chargement des données globales: {e}")
+        
         return users
     
     def should_run_for_user(self, user_settings):
@@ -121,7 +125,7 @@ class AutoBriefScheduler:
             self.logger.info(f"📧 Newsletters: {', '.join(newsletters)}")
             
             # Mettre à jour la date de dernière exécution
-            self.update_last_run(user_info['file_path'])
+            self.update_last_run(user_info['file_path'], user_info['email'])
             
             # Log du résumé simulé
             summary = f"Résumé automatique généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}"
@@ -133,21 +137,27 @@ class AutoBriefScheduler:
             self.logger.error(f"❌ Erreur traitement {user_info['email']}: {e}")
             return False
     
-    def update_last_run(self, user_file_path):
+    def update_last_run(self, user_file_path, user_email):
         """Met à jour la date de dernière exécution pour un utilisateur"""
         try:
+            # Charger les données globales
             with open(user_file_path, 'r', encoding='utf-8') as f:
-                user_data = json.load(f)
+                all_users_data = json.load(f)
             
-            user_data['settings']['last_run'] = datetime.now().isoformat()
-            
-            with open(user_file_path, 'w', encoding='utf-8') as f:
-                json.dump(user_data, f, indent=2, ensure_ascii=False)
+            # Mettre à jour la date pour cet utilisateur
+            if user_email in all_users_data:
+                all_users_data[user_email]['settings']['last_run'] = datetime.now().isoformat()
                 
-            print(f"✅ Date de dernière exécution mise à jour")
+                # Sauvegarder les données mises à jour
+                with open(user_file_path, 'w', encoding='utf-8') as f:
+                    json.dump(all_users_data, f, indent=2, ensure_ascii=False)
+                    
+                self.logger.info(f"✅ Date de dernière exécution mise à jour pour {user_email}")
+            else:
+                self.logger.warning(f"⚠️ Utilisateur {user_email} non trouvé dans les données")
             
         except Exception as e:
-            print(f"❌ Erreur mise à jour: {e}")
+            self.logger.error(f"❌ Erreur mise à jour: {e}")
     
     def run_scheduler(self):
         """Fonction principale du scheduler"""

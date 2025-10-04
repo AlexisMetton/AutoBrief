@@ -47,7 +47,10 @@ class Config:
     CREDENTIALS_PATH = 'credentials.json'
     
     # Scopes Gmail
-    SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+    SCOPES = [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send'
+    ]
     
     
     # Headers pour éviter les blocages
