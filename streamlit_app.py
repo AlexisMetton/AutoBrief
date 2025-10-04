@@ -155,7 +155,7 @@ def show_home_page(newsletter_manager):
     # Actions rapides
     st.markdown("### 🚀 Actions rapides")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("🔄 Générer le résumé maintenant", type="primary", use_container_width=True):
@@ -173,6 +173,22 @@ def show_home_page(newsletter_manager):
                         st.error("❌ Aucun contenu trouvé pour la période sélectionnée")
     
     with col2:
+        if st.button("📧 Tester l'envoi", type="secondary", use_container_width=True):
+            settings = newsletter_manager.get_user_settings()
+            notification_email = settings.get('notification_email')
+            if notification_email and notification_email.strip():
+                try:
+                    test_summary = "Ceci est un test d'envoi d'email depuis AutoBrief. Si vous recevez ce message, l'envoi automatique fonctionne correctement !"
+                    if newsletter_manager.send_summary_email(test_summary, notification_email):
+                        st.success(f"✅ Email de test envoyé à {notification_email}")
+                    else:
+                        st.error("❌ Erreur lors de l'envoi de l'email de test")
+                except Exception as e:
+                    st.error(f"❌ Erreur: {e}")
+            else:
+                st.warning("⚠️ Configurez d'abord une adresse email de notification")
+    
+    with col3:
         if st.button("📧 Gérer les newsletters", use_container_width=True):
             st.session_state['page'] = "📧 Newsletters"
             st.rerun()
@@ -325,23 +341,42 @@ def show_scheduler_page(newsletter_manager):
     # Test manuel du scheduler
     st.markdown("### 🧪 Test du Scheduler")
     
-    if st.button("🚀 Lancer le scheduler maintenant", type="primary"):
-        with st.spinner("🔄 Exécution du scheduler..."):
-            try:
-                # Simuler l'exécution du scheduler
-                if newsletter_manager.should_run_automatically():
-                    result = newsletter_manager.process_newsletters()
-                    if result:
-                        st.success("✅ Scheduler exécuté avec succès !")
-                        st.session_state['last_summary'] = result
-                        st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🚀 Lancer le scheduler maintenant", type="primary"):
+            with st.spinner("🔄 Exécution du scheduler..."):
+                try:
+                    # Simuler l'exécution du scheduler
+                    if newsletter_manager.should_run_automatically():
+                        result = newsletter_manager.process_newsletters()
+                        if result:
+                            st.success("✅ Scheduler exécuté avec succès !")
+                            st.session_state['last_summary'] = result
+                            st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                        else:
+                            st.warning("⚠️ Aucun contenu trouvé pour la période sélectionnée")
                     else:
-                        st.warning("⚠️ Aucun contenu trouvé pour la période sélectionnée")
-                else:
-                    st.info("ℹ️ Pas encore l'heure d'exécution selon votre planification")
-                    
-            except Exception as e:
-                st.error(f"❌ Erreur lors de l'exécution: {e}")
+                        st.info("ℹ️ Pas encore l'heure d'exécution selon votre planification")
+                        
+                except Exception as e:
+                    st.error(f"❌ Erreur lors de l'exécution: {e}")
+    
+    with col2:
+        if st.button("📧 Tester l'envoi d'email", type="secondary"):
+            settings = newsletter_manager.get_user_settings()
+            notification_email = settings.get('notification_email')
+            if notification_email and notification_email.strip():
+                try:
+                    test_summary = "Ceci est un test d'envoi d'email depuis AutoBrief. Si vous recevez ce message, l'envoi automatique fonctionne correctement !"
+                    if newsletter_manager.send_summary_email(test_summary, notification_email):
+                        st.success(f"✅ Email de test envoyé à {notification_email}")
+                    else:
+                        st.error("❌ Erreur lors de l'envoi de l'email de test")
+                except Exception as e:
+                    st.error(f"❌ Erreur: {e}")
+            else:
+                st.warning("⚠️ Veuillez d'abord configurer une adresse email de notification")
     
     # Configuration GitHub Actions
     st.markdown("### 🚀 Configuration GitHub Actions")

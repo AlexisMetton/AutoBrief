@@ -486,6 +486,12 @@ class NewsletterManager:
         # Mettre à jour la date de dernière exécution
         if output:
             self.update_last_run()
+            
+            # Envoyer par email si une adresse de notification est configurée
+            settings = self.get_user_settings()
+            notification_email = settings.get('notification_email')
+            if notification_email and notification_email.strip():
+                self.send_summary_email(output, notification_email)
         
         return output
     
@@ -494,4 +500,52 @@ class NewsletterManager:
         settings = self.get_user_settings()
         settings['last_run'] = datetime.now().isoformat()
         self.save_user_settings(settings)
+    
+    def send_summary_email(self, summary, notification_email):
+        """Envoie le résumé par email"""
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.base import MIMEBase
+            from email import encoders
+            
+            # Configuration Gmail (utilise les mêmes credentials OAuth2)
+            service = self.get_gmail_service()
+            if not service:
+                st.error("❌ Impossible d'accéder à Gmail pour l'envoi")
+                return False
+            
+            # Créer le message
+            message = MIMEMultipart()
+            message['From'] = service.users().getProfile(userId='me').execute()['emailAddress']
+            message['To'] = notification_email
+            message['Subject'] = f"📰 Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
+            
+            # Corps du message
+            body = f"""
+            Bonjour,
+            
+            Voici votre résumé automatique des newsletters :
+            
+            {summary}
+            
+            ---
+            Généré automatiquement par AutoBrief
+            """
+            
+            message.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # Encoder le message
+            raw_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
+            
+            # Envoyer l'email
+            sent_message = service.users().messages().send(userId='me', body=raw_message).execute()
+            
+            st.success(f"✅ Résumé envoyé par email à {notification_email}")
+            return True
+            
+        except Exception as e:
+            st.error(f"❌ Erreur lors de l'envoi: {e}")
+            return False
 
