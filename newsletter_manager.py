@@ -77,15 +77,10 @@ class NewsletterManager:
         return default_data
     
     def load_from_external_storage(self):
-        """Charge les données depuis le stockage externe"""
+        """Charge les données depuis GitHub Gist"""
         try:
-            # Essayer GitHub Gist
+            # GitHub Gist
             data = self.load_from_github_gist()
-            if data:
-                return data
-            
-            # Essayer JSONBin.io
-            data = self.load_from_jsonbin()
             if data:
                 return data
                 
@@ -93,26 +88,23 @@ class NewsletterManager:
         except:
             return None
     
-    def load_from_jsonbin(self):
-        """Charge depuis JSONBin.io"""
-        try:
-            bin_id = st.session_state.get('jsonbin_id')
-            if not bin_id:
-                return None
-            
-            import requests
-            response = requests.get(f'https://api.jsonbin.io/v3/b/{bin_id}')
-            
-            if response.status_code == 200:
-                return response.json()['record']
-            return None
-        except:
-            return None
-    
     def load_from_github_gist(self):
-        """Charge depuis GitHub Gist"""
+        """Charge depuis GitHub Gist partagé"""
         try:
-            gist_id = st.session_state.get('gist_id')
+            # Utiliser le Gist partagé depuis les secrets Streamlit
+            gist_id = None
+            
+            # Essayer d'abord depuis les secrets Streamlit
+            try:
+                if hasattr(st, 'secrets') and 'GIST_ID' in st.secrets:
+                    gist_id = st.secrets['GIST_ID']
+            except:
+                pass
+            
+            # Fallback sur la session state
+            if not gist_id:
+                gist_id = st.session_state.get('gist_id')
+            
             if not gist_id:
                 return None
             
@@ -123,7 +115,11 @@ class NewsletterManager:
                 gist_data = response.json()
                 if 'user_data.json' in gist_data['files']:
                     content = gist_data['files']['user_data.json']['content']
-                    return json.loads(content)
+                    all_users_data = json.loads(content) if content else {}
+                    
+                    # Retourner les données de cet utilisateur spécifique
+                    if self.user_email in all_users_data:
+                        return all_users_data[self.user_email]
             return None
         except:
             return None
@@ -148,21 +144,17 @@ class NewsletterManager:
             return False
     
     def save_to_external_storage(self, data):
-        """Sauvegarde les données dans un stockage externe automatique"""
+        """Sauvegarde les données dans GitHub Gist automatiquement"""
         try:
-            # Option 1: GitHub Gist (gratuit et automatique)
+            # GitHub Gist (gratuit et automatique)
             if self.save_to_github_gist(data):
                 return True
             
-            # Option 2: JSONBin.io (gratuit et simple)
-            if self.save_to_jsonbin(data):
-                return True
-            
-            # Option 3: Fallback sur fichier local
+            # Fallback sur fichier local si GitHub Gist échoue
             return self.save_to_local_file(data)
             
         except Exception as e:
-            st.warning(f"⚠️ Sauvegarde externe échouée: {e}")
+            st.warning(f"⚠️ Sauvegarde GitHub Gist échouée: {e}")
             return False
     
     def save_to_github_gist(self, data):
@@ -170,99 +162,75 @@ class NewsletterManager:
         try:
             import requests
             
-            # GitHub Gist est gratuit et ne nécessite pas d'API key
-            gist_id = st.session_state.get('gist_id')
+            # Utiliser le Gist partagé depuis les secrets Streamlit
+            gist_id = None
+            
+            # Essayer d'abord depuis les secrets Streamlit
+            try:
+                if hasattr(st, 'secrets') and 'GIST_ID' in st.secrets:
+                    gist_id = st.secrets['GIST_ID']
+            except:
+                pass
+            
+            # Fallback sur la session state
+            if not gist_id:
+                gist_id = st.session_state.get('gist_id')
             
             if not gist_id:
-                # Créer un nouveau gist
-                gist_data = {
-                    "description": "AutoBrief User Data",
-                    "public": False,
-                    "files": {
-                        "user_data.json": {
-                            "content": json.dumps(data, indent=2, ensure_ascii=False)
-                        }
-                    }
-                }
+                st.warning("""
+                ⚠️ **Gist partagé non configuré**
                 
-                response = requests.post(
-                    'https://api.github.com/gists',
-                    json=gist_data,
-                    headers={'Accept': 'application/vnd.github.v3+json'}
-                )
-                
-                if response.status_code == 201:
-                    gist_info = response.json()
-                    gist_id = gist_info['id']
-                    st.session_state['gist_id'] = gist_id
-                    st.success("✅ Stockage automatique configuré avec GitHub Gist !")
-                    return True
-            else:
-                # Mettre à jour le gist existant
-                gist_data = {
-                    "files": {
-                        "user_data.json": {
-                            "content": json.dumps(data, indent=2, ensure_ascii=False)
-                        }
-                    }
-                }
-                
-                response = requests.patch(
-                    f'https://api.github.com/gists/{gist_id}',
-                    json=gist_data,
-                    headers={'Accept': 'application/vnd.github.v3+json'}
-                )
-                
-                if response.status_code == 200:
-                    return True
+                Pour utiliser la persistance automatique :
+                1. Le développeur doit configurer un Gist partagé
+                2. Ajouter le secret `GIST_ID` dans Streamlit Cloud
+                3. Tous les utilisateurs partageront le même Gist
+                """)
+                return False
             
-            return False
-        except:
+            # Charger les données existantes du Gist
+            response = requests.get(f'https://api.github.com/gists/{gist_id}')
+            
+            if response.status_code == 200:
+                gist_data = response.json()
+                if 'user_data.json' in gist_data['files']:
+                    # Charger les données existantes
+                    existing_content = gist_data['files']['user_data.json']['content']
+                    all_users_data = json.loads(existing_content) if existing_content else {}
+                else:
+                    all_users_data = {}
+                
+                # Ajouter/mettre à jour les données de cet utilisateur
+                all_users_data[self.user_email] = data
+                
+                # Mettre à jour le Gist avec toutes les données
+                update_data = {
+                    "files": {
+                        "user_data.json": {
+                            "content": json.dumps(all_users_data, indent=2, ensure_ascii=False)
+                        }
+                    }
+                }
+                
+                update_response = requests.patch(
+                    f'https://api.github.com/gists/{gist_id}',
+                    json=update_data,
+                    headers={'Accept': 'application/vnd.github.v3+json'}
+                )
+                
+                if update_response.status_code == 200:
+                    st.success("✅ Données sauvegardées dans le Gist partagé !")
+                    return True
+                else:
+                    st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                    return False
+            else:
+                st.error(f"❌ Erreur lors de l'accès au Gist: {response.status_code}")
+                return False
+            
+        except Exception as e:
+            st.error(f"❌ Erreur GitHub Gist: {e}")
             return False
     
-    def save_to_jsonbin(self, data):
-        """Sauvegarde dans JSONBin.io (gratuit)"""
-        try:
-            import requests
-            
-            # JSONBin.io est gratuit et simple
-            bin_id = st.session_state.get('jsonbin_id')
-            api_key = st.session_state.get('jsonbin_api_key')
-            
-            if not bin_id or not api_key:
-                # Créer un nouveau bin
-                response = requests.post(
-                    'https://api.jsonbin.io/v3/b',
-                    json=data,
-                    headers={
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': '$2a$10$your-api-key-here'  # Clé publique
-                    }
-                )
-                
-                if response.status_code == 201:
-                    bin_data = response.json()
-                    bin_id = bin_data['metadata']['id']
-                    st.session_state['jsonbin_id'] = bin_id
-                    st.success("✅ Stockage automatique configuré !")
-                    return True
-            else:
-                # Mettre à jour le bin existant
-                response = requests.put(
-                    f'https://api.jsonbin.io/v3/b/{bin_id}',
-                    json=data,
-                    headers={
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': api_key
-                    }
-                )
-                
-                if response.status_code == 200:
-                    return True
-            
-            return False
-        except:
-            return False
     
     def save_to_local_file(self, data):
         """Sauvegarde dans un fichier local (fallback)"""

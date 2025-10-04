@@ -34,29 +34,38 @@ class AutoBriefScheduler:
         self.logger = logging.getLogger(__name__)
         
     def get_all_users(self):
-        """Récupère tous les utilisateurs depuis les secrets GitHub"""
+        """Récupère tous les utilisateurs depuis GitHub Gist"""
         users = []
         
         try:
-            # Charger les données depuis les secrets GitHub (variables d'environnement)
-            user_data_json = os.getenv('USER_DATA')
+            # Charger les données depuis GitHub Gist
+            gist_id = os.getenv('GIST_ID')
             
-            if not user_data_json:
-                self.logger.info("Aucune donnée utilisateur trouvée dans les secrets GitHub")
+            if not gist_id:
+                self.logger.info("Aucun GIST_ID trouvé dans les secrets GitHub")
                 return users
             
-            all_users_data = json.loads(user_data_json)
+            import requests
+            response = requests.get(f'https://api.github.com/gists/{gist_id}')
             
-            for user_email, user_data in all_users_data.items():
-                settings = user_data.get('settings', {})
-                
-                # Vérifier si l'utilisateur a activé l'envoi automatique
-                if settings.get('auto_send', False):
-                    users.append({
-                        'email': user_email,
-                        'settings': settings,
-                        'newsletters': user_data.get('newsletters', [])
-                    })
+            if response.status_code == 200:
+                gist_data = response.json()
+                if 'user_data.json' in gist_data['files']:
+                    content = gist_data['files']['user_data.json']['content']
+                    all_users_data = json.loads(content)
+                    
+                    for user_email, user_data in all_users_data.items():
+                        settings = user_data.get('settings', {})
+                        
+                        # Vérifier si l'utilisateur a activé l'envoi automatique
+                        if settings.get('auto_send', False):
+                            users.append({
+                                'email': user_email,
+                                'settings': settings,
+                                'newsletters': user_data.get('newsletters', [])
+                            })
+            else:
+                self.logger.error(f"Erreur lors de la récupération du Gist: {response.status_code}")
                     
         except Exception as e:
             self.logger.error(f"Erreur lors du chargement des données utilisateur: {e}")
@@ -125,7 +134,7 @@ class AutoBriefScheduler:
             self.logger.info(f"📧 Newsletters: {', '.join(newsletters)}")
             
             # Mettre à jour la date de dernière exécution
-            self.update_last_run(user_info['file_path'], user_info['email'])
+            self.update_last_run(user_info['email'])
             
             # Log du résumé simulé
             summary = f"Résumé automatique généré pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}"
@@ -144,24 +153,55 @@ class AutoBriefScheduler:
             self.logger.error(f"❌ Erreur traitement {user_info['email']}: {e}")
             return False
     
-    def update_last_run(self, user_file_path, user_email):
-        """Met à jour la date de dernière exécution pour un utilisateur"""
+    def update_last_run(self, user_email):
+        """Met à jour la date de dernière exécution pour un utilisateur dans GitHub Gist"""
         try:
-            # Charger les données globales
-            with open(user_file_path, 'r', encoding='utf-8') as f:
-                all_users_data = json.load(f)
+            gist_id = os.getenv('GIST_ID')
             
-            # Mettre à jour la date pour cet utilisateur
-            if user_email in all_users_data:
-                all_users_data[user_email]['settings']['last_run'] = datetime.now().isoformat()
-                
-                # Sauvegarder les données mises à jour
-                with open(user_file_path, 'w', encoding='utf-8') as f:
-                    json.dump(all_users_data, f, indent=2, ensure_ascii=False)
+            if not gist_id:
+                self.logger.error("GIST_ID non trouvé dans les variables d'environnement")
+                return
+            
+            import requests
+            
+            # Charger les données actuelles du Gist
+            response = requests.get(f'https://api.github.com/gists/{gist_id}')
+            
+            if response.status_code == 200:
+                gist_data = response.json()
+                if 'user_data.json' in gist_data['files']:
+                    content = gist_data['files']['user_data.json']['content']
+                    all_users_data = json.loads(content)
                     
-                self.logger.info(f"✅ Date de dernière exécution mise à jour pour {user_email}")
+                    # Mettre à jour la date pour cet utilisateur
+                    if user_email in all_users_data:
+                        all_users_data[user_email]['settings']['last_run'] = datetime.now().isoformat()
+                        
+                        # Mettre à jour le Gist
+                        update_data = {
+                            "files": {
+                                "user_data.json": {
+                                    "content": json.dumps(all_users_data, indent=2, ensure_ascii=False)
+                                }
+                            }
+                        }
+                        
+                        update_response = requests.patch(
+                            f'https://api.github.com/gists/{gist_id}',
+                            json=update_data,
+                            headers={'Accept': 'application/vnd.github.v3+json'}
+                        )
+                        
+                        if update_response.status_code == 200:
+                            self.logger.info(f"✅ Date de dernière exécution mise à jour pour {user_email}")
+                        else:
+                            self.logger.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                    else:
+                        self.logger.warning(f"⚠️ Utilisateur {user_email} non trouvé dans les données")
+                else:
+                    self.logger.error("Fichier user_data.json non trouvé dans le Gist")
             else:
-                self.logger.warning(f"⚠️ Utilisateur {user_email} non trouvé dans les données")
+                self.logger.error(f"❌ Erreur lors de la récupération du Gist: {response.status_code}")
             
         except Exception as e:
             self.logger.error(f"❌ Erreur mise à jour: {e}")
