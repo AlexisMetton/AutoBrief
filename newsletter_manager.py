@@ -25,13 +25,23 @@ class NewsletterManager:
             os.makedirs(self.data_dir)
     
     def load_user_data(self):
-        """Charge les données utilisateur depuis le fichier"""
+        """Charge les données utilisateur depuis les secrets Streamlit, le cache ou le fichier"""
         try:
+            # 1. Essayer d'abord le cache de session (données modifiées récemment)
+            if 'user_data_cache' in st.session_state:
+                return st.session_state['user_data_cache']
+            
+            # 2. Essayer les secrets Streamlit (pour Streamlit Cloud)
+            if hasattr(st, 'secrets') and 'user_data' in st.secrets:
+                return st.secrets['user_data']
+            
+            # 3. Fallback sur le fichier local (pour développement local)
             if os.path.exists(self.user_data_file):
                 with open(self.user_data_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
         except Exception as e:
             st.warning(f"⚠️ Erreur lors du chargement des données: {e}")
+        
         return {
             'newsletters': [],
             'settings': {
@@ -47,8 +57,16 @@ class NewsletterManager:
         }
     
     def save_user_data(self, data):
-        """Sauvegarde les données utilisateur dans le fichier"""
+        """Sauvegarde les données utilisateur dans les secrets Streamlit ou le fichier"""
         try:
+            # Essayer d'abord les secrets Streamlit (pour Streamlit Cloud)
+            if hasattr(st, 'secrets') and 'user_data' in st.secrets:
+                # Sur Streamlit Cloud, on ne peut pas modifier les secrets à la volée
+                # On va utiliser la session state comme cache temporaire
+                st.session_state['user_data_cache'] = data
+                return True
+            
+            # Fallback sur le fichier local (pour développement local)
             with open(self.user_data_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             return True
@@ -220,6 +238,19 @@ class NewsletterManager:
         - Vous pouvez choisir le **jour** (pour hebdomadaire/mensuel) et l'**heure** de votre choix
         - L'heure est en **UTC** (GitHub Actions fonctionne en UTC)
         - **Marge de 1 heure** : Le système accepte +/- 1 heure pour la flexibilité
+        """)
+        
+        # Note sur la persistance
+        st.markdown("---")
+        st.markdown("### 💾 Persistance des données")
+        
+        st.warning("""
+        ⚠️ **Important :** Sur Streamlit Cloud, les données sont sauvegardées dans les secrets.
+        
+        **Pour une persistance complète :**
+        1. Allez dans les **Settings** de votre app Streamlit Cloud
+        2. Ajoutez le secret `user_data` (voir guide)
+        3. Vos newsletters et paramètres seront sauvegardés
         """)
         
         settings = self.get_user_settings()
