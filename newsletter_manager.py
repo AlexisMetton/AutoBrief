@@ -251,33 +251,46 @@ class NewsletterManager:
                     }
                 }
                 
-                # Essayer de mettre à jour le Gist (fonctionne avec les Gists publics)
-                update_response = requests.patch(
-                    f'https://api.github.com/gists/{gist_id}',
-                    json=update_data,
-                    headers={'Accept': 'application/vnd.github.v3+json'}
-                )
+                # Essayer de mettre à jour le Gist avec authentification GitHub
+                gist_token = st.secrets.get('GIST_TOKEN')
                 
-                if update_response.status_code == 200:
-                    st.success("✅ Données sauvegardées dans le Gist partagé !")
-                    return True
-                elif update_response.status_code == 403:
-                    st.warning("""
-                    ⚠️ **Gist privé - Sauvegarde limitée**
+                if gist_token:
+                    # Utiliser le token GitHub pour l'authentification
+                    headers = {
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Authorization': f'token {gist_token}'
+                    }
                     
-                    Le Gist est privé. Pour permettre la sauvegarde :
-                    1. **Option 1** : Rendez le Gist public (recommandé)
-                    2. **Option 2** : Configurez un token GitHub
+                    update_response = requests.patch(
+                        f'https://api.github.com/gists/{gist_id}',
+                        json=update_data,
+                        headers=headers
+                    )
                     
-                    **Pour rendre le Gist public :**
-                    1. Allez sur votre Gist
-                    2. Cliquez sur "Edit"
-                    3. Cochez "Public"
-                    4. Sauvegardez
-                    """)
-                    return False
+                    if update_response.status_code == 200:
+                        st.success("✅ Données sauvegardées automatiquement dans le Gist !")
+                        return True
+                    else:
+                        st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                        st.info("Vérifiez que le token Gist est correct dans les secrets")
+                        return False
                 else:
-                    st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                    # Pas de token Gist - sauvegarde en session
+                    st.warning("""
+                    ⚠️ **Sauvegarde en session uniquement**
+                    
+                    Aucun token Gist configuré. Pour la sauvegarde automatique :
+                    1. Créez un token GitHub avec le scope `gist`
+                    2. Ajoutez-le dans les secrets Streamlit : `GIST_TOKEN`
+                    3. Ou copiez les données ci-dessous manuellement
+                    """)
+                    
+                    # Afficher les données à copier
+                    st.code(f"""
+# Copiez ceci dans votre Gist user_data.json :
+{json.dumps(all_users_data, indent=2, ensure_ascii=False)}
+                    """, language="json")
+                    
                     return False
                 
             elif response.status_code == 404:
