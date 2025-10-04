@@ -23,6 +23,51 @@ class NewsletterManager:
         # Créer le répertoire de données si nécessaire
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
+        
+        # Vérifier la configuration du Gist au démarrage
+        self.check_gist_configuration()
+    
+    def check_gist_configuration(self):
+        """Vérifie la configuration du Gist au démarrage"""
+        try:
+            gist_id = None
+            
+            # Vérifier si le Gist est configuré dans les secrets
+            try:
+                if hasattr(st, 'secrets') and 'GIST_ID' in st.secrets:
+                    gist_id = st.secrets['GIST_ID']
+            except:
+                pass
+            
+            if not gist_id:
+                st.warning("""
+                ⚠️ **Gist partagé non configuré**
+                
+                Pour utiliser la persistance automatique :
+                1. Créez un Gist manuellement sur [gist.github.com](https://gist.github.com)
+                2. Ajoutez le secret `GIST_ID` dans Streamlit Cloud
+                3. Tous les utilisateurs partageront le même Gist
+                """)
+                return False
+            
+            # Vérifier que le Gist existe et est accessible
+            import requests
+            response = requests.get(f'https://api.github.com/gists/{gist_id}')
+            
+            if response.status_code == 200:
+                st.success("✅ Gist partagé configuré et accessible !")
+                return True
+            elif response.status_code == 404:
+                st.error(f"❌ Gist non trouvé: {gist_id}")
+                st.info("Vérifiez que l'ID du Gist est correct dans les secrets Streamlit")
+                return False
+            else:
+                st.error(f"❌ Erreur lors de l'accès au Gist: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            st.warning(f"⚠️ Erreur lors de la vérification du Gist: {e}")
+            return False
     
     def load_user_data(self):
         """Charge les données utilisateur automatiquement"""
@@ -162,32 +207,27 @@ class NewsletterManager:
         try:
             import requests
             
-            # Utiliser le Gist partagé depuis les secrets Streamlit
+            # Vérifier que le Gist est configuré dans les secrets
             gist_id = None
             
-            # Essayer d'abord depuis les secrets Streamlit
             try:
                 if hasattr(st, 'secrets') and 'GIST_ID' in st.secrets:
                     gist_id = st.secrets['GIST_ID']
             except:
                 pass
             
-            # Fallback sur la session state
-            if not gist_id:
-                gist_id = st.session_state.get('gist_id')
-            
             if not gist_id:
                 st.warning("""
                 ⚠️ **Gist partagé non configuré**
                 
                 Pour utiliser la persistance automatique :
-                1. Le développeur doit configurer un Gist partagé
+                1. Le développeur doit créer un Gist manuellement
                 2. Ajouter le secret `GIST_ID` dans Streamlit Cloud
                 3. Tous les utilisateurs partageront le même Gist
                 """)
                 return False
             
-            # Charger les données existantes du Gist
+            # Vérifier que le Gist existe et est accessible
             response = requests.get(f'https://api.github.com/gists/{gist_id}')
             
             if response.status_code == 200:
@@ -211,18 +251,21 @@ class NewsletterManager:
                     }
                 }
                 
-                update_response = requests.patch(
-                    f'https://api.github.com/gists/{gist_id}',
-                    json=update_data,
-                    headers={'Accept': 'application/vnd.github.v3+json'}
-                )
+                # Utiliser l'API GitHub sans authentification (lecture seule)
+                # Pour l'écriture, il faudrait un token GitHub
+                st.warning("""
+                ⚠️ **Mise à jour du Gist non autorisée**
                 
-                if update_response.status_code == 200:
-                    st.success("✅ Données sauvegardées dans le Gist partagé !")
-                    return True
-                else:
-                    st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
-                    return False
+                Le Gist est en lecture seule. Pour permettre la sauvegarde :
+                1. Le développeur doit configurer un token GitHub
+                2. Ou utiliser un Gist public en lecture seule
+                """)
+                return False
+                
+            elif response.status_code == 404:
+                st.error(f"❌ Gist non trouvé: {gist_id}")
+                st.info("Vérifiez que l'ID du Gist est correct dans les secrets Streamlit")
+                return False
             else:
                 st.error(f"❌ Erreur lors de l'accès au Gist: {response.status_code}")
                 return False
