@@ -982,30 +982,53 @@ class NewsletterManager:
                 print("❌ DEBUG: Aucun message trouvé")
                 return None
             
-            # Traiter chaque message
-            output = ""
+            # Filtrer les emails promotionnels
+            filtered_messages = []
             for idx, msg in enumerate(messages):
-                print(f"🔍 DEBUG: Traitement message {idx + 1}/{len(messages)}")
+                print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)}")
+                message = self.get_message(service, msg['id'])
+                
+                if message:
+                    is_promotional = self.is_promotional_email(message)
+                    if is_promotional:
+                        print(f"🚫 DEBUG: Email {idx + 1} détecté comme promotionnel - ignoré")
+                    else:
+                        print(f"✅ DEBUG: Email {idx + 1} validé comme contenu éditorial")
+                        filtered_messages.append(msg)
+                else:
+                    print("❌ DEBUG: Impossible de récupérer le message")
+            
+            print(f"🔍 DEBUG: {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
+            
+            # Traiter seulement les emails non-promotionnels
+            all_content = ""
+            for idx, msg in enumerate(filtered_messages):
+                print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
                 message = self.get_message(service, msg['id'])
                 
                 if message:
                     body = self.get_message_body(message)
                     if body:
                         print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
-                        summary = self.summarize_newsletter(body, custom_prompt)
-                        print(f"🔍 DEBUG: Résumé IA généré: {len(summary) if summary else 0} caractères")
-                        if summary and len(summary.strip()) > 0:
-                            summary = self.replace_redirected_links(summary)
-                            output += summary
-                            print(f"✅ DEBUG: Résumé ajouté à l'output")
-                        else:
-                            print("❌ DEBUG: Résumé vide ou invalide")
+                        if all_content:
+                            all_content += "\n\n--- NOUVEL EMAIL ---\n\n"
+                        all_content += body
+                        print(f"✅ DEBUG: Contenu éditorial ajouté")
                     else:
                         print("❌ DEBUG: Impossible d'extraire le corps du message")
                 else:
                     print("❌ DEBUG: Impossible de récupérer le message")
             
-            print(f"🔍 DEBUG: Output final: {len(output)} caractères")
+            print(f"🔍 DEBUG: Contenu éditorial global: {len(all_content)} caractères")
+            
+            # Générer un seul résumé pour tous les emails non-promotionnels
+            if all_content.strip():
+                print(f"🔍 DEBUG: Génération du résumé global...")
+                output = self.summarize_newsletter(all_content, custom_prompt)
+                print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
+            else:
+                output = ""
+                print("❌ DEBUG: Aucun contenu éditorial à traiter")
             
             # Envoyer par email si demandé
             if output and send_email:
