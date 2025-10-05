@@ -877,6 +877,9 @@ class NewsletterManager:
         
         try:
             print(f"🔍 DEBUG: Appel OpenAI avec {len(full_prompt)} caractères de prompt")
+            if hasattr(st, 'info'):
+                st.info(f"🔍 Appel OpenAI avec {len(full_prompt)} caractères")
+            
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 response_format={"type": "json_object"},
@@ -884,21 +887,32 @@ class NewsletterManager:
             )
             
             print(f"🔍 DEBUG: Réponse OpenAI reçue")
+            if hasattr(st, 'info'):
+                st.info("📡 Réponse OpenAI reçue")
             
             # Vérifier que la réponse n'est pas vide
             response_content = response.choices[0].message.content
             if not response_content or response_content.strip() == "":
                 print(f"❌ DEBUG: Réponse OpenAI vide")
+                if hasattr(st, 'error'):
+                    st.error("❌ Réponse OpenAI vide")
                 return ""
             
             print(f"🔍 DEBUG: Contenu réponse: '{response_content[:100]}...'")
+            if hasattr(st, 'info'):
+                st.info(f"📄 Contenu reçu: '{response_content[:100]}...'")
             
             try:
                 data = json.loads(response_content)
                 print(f"🔍 DEBUG: JSON parsé: {list(data.keys())}")
+                if hasattr(st, 'info'):
+                    st.info(f"✅ JSON parsé: {list(data.keys())}")
             except json.JSONDecodeError as json_error:
                 print(f"❌ DEBUG: Erreur parsing JSON: {json_error}")
                 print(f"❌ DEBUG: Contenu reçu: '{response_content}'")
+                if hasattr(st, 'error'):
+                    st.error(f"❌ Erreur JSON: {json_error}")
+                    st.error(f"Contenu: {response_content}")
                 return ""
             
             if 'result' in data and isinstance(data['result'], str):
@@ -906,12 +920,19 @@ class NewsletterManager:
                 print(f"🔍 DEBUG: Résultat IA: {len(result)} caractères")
                 print(f"🔍 DEBUG: Premiers 200 caractères: {result[:200]}...")
                 
+                if len(result.strip()) == 0:
+                    if hasattr(st, 'warning'):
+                        st.warning("⚠️ L'IA a retourné une chaîne vide")
+                    return ""
+                
                 # Debug pour voir ce que l'IA génère
                 if hasattr(st, 'write'):
                     st.write(f"🔍 Debug: HTML généré par l'IA (premiers 500 caractères): {result[:500]}...")
                 return result
             else:
                 print(f"❌ DEBUG: Pas de 'result' valide dans la réponse: {data}")
+                if hasattr(st, 'error'):
+                    st.error(f"❌ Pas de 'result' valide: {data}")
                 return ""
         except Exception as e:
             print(f"❌ DEBUG: Erreur OpenAI: {e}")
