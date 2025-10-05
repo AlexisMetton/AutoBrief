@@ -746,7 +746,7 @@ class NewsletterManager:
         return summary
     
     def is_promotional_email(self, message):
-        """Détecte si un email est promotionnel en analysant le sujet et le contenu"""
+        """Détecte si un email est promotionnel en analysant le sujet"""
         try:
             # Extraire le sujet
             headers = message['payload'].get('headers', [])
@@ -756,41 +756,10 @@ class NewsletterManager:
                     subject = header['value']
                     break
             
-            # Extraire un extrait du contenu (premiers 5fix00 caractères)
-            body = self.get_message_body(message)
-            content_preview = body[:500] if body else ""
-            
-            # Utiliser l'IA pour détecter si c'est promotionnel
-            prompt = f"""Analysez cet email et déterminez s'il s'agit d'un email promotionnel ou d'un contenu éditorial.
-
-Sujet: {subject}
-Contenu: {content_preview}
-
-Répondez uniquement par "PROMOTIONNEL" ou "EDITORIAL"."""
-
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant that classifies emails."},
-                {"role": "user", "content": prompt}
-            ]
-            
-            try:
-                response = self.client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=messages,
-                    max_tokens=20,
-                    temperature=0.1
-                )
-                
-                result = response.choices[0].message.content.strip().upper()
-                is_promotional = "PROMOTIONNEL" in result
-                
-                print(f"🔍 DEBUG: Classification email - Sujet: '{subject[:50]}...' → {result}")
-                return is_promotional
-                
-            except Exception as e:
-                print(f"❌ DEBUG: Erreur classification IA: {e}")
-                # En cas d'erreur IA, utiliser une détection basique par mots-clés
-                return self.is_promotional_basic(subject, content_preview)
+            # Détection par mots-clés dans le sujet uniquement
+            is_promotional = self.is_promotional_basic(subject, "")
+            print(f"🔍 DEBUG: Classification email - Sujet: '{subject[:50]}...' → {'PROMOTIONNEL' if is_promotional else 'EDITORIAL'}")
+            return is_promotional
             
         except Exception as e:
             print(f"❌ DEBUG: Erreur classification email: {e}")
