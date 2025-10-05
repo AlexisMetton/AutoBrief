@@ -191,8 +191,12 @@ def show_home_page(newsletter_manager):
                 st.error("Aucune newsletter configurée. Allez dans l'onglet 'Newsletters' pour en ajouter.")
             else:
                 with st.spinner("Test de la newsletter en cours..."):
-                    # Générer le résumé
-                    result = newsletter_manager.process_newsletters(send_email=True)
+                    # Récupérer la configuration utilisateur
+                    user_data = newsletter_manager.load_user_data()
+                    days_to_analyze = user_data.get('settings', {}).get('days_to_analyze', 7)
+                    
+                    # Générer le résumé avec la configuration utilisateur
+                    result = newsletter_manager.process_newsletters(days=days_to_analyze, send_email=True)
                     if result:
                         st.session_state['last_summary'] = result
                         st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
