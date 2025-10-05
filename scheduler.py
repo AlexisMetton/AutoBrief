@@ -260,10 +260,8 @@ class AutoBriefScheduler:
                     auth = SecureAuth()
                     
                     # Récupérer les credentials de l'utilisateur depuis le Gist
-                    self.logger.info(f"🔍 Récupération credentials pour {user_info['email']}")
                     user_credentials = self.get_user_credentials_from_gist(user_info['email'])
                     if user_credentials:
-                        self.logger.info(f"✅ Credentials récupérées pour {user_info['email']}")
                         # Convertir les credentials en JSON string pour SecureAuth
                         import json
                         credentials_json = json.dumps(user_credentials)
@@ -279,14 +277,16 @@ class AutoBriefScheduler:
                     return False
                 
                 # Générer le résumé avec l'IA et envoyer l'email
-                self.logger.info(f"🔄 Début génération résumé IA pour {user_info['email']}")
-                summary_result = newsletter_manager.process_newsletters(send_email=True)
-                self.logger.info(f"🔄 Résultat génération IA: {summary_result}")
+                days_to_analyze = user_info.get('settings', {}).get('days_to_analyze', 7)
+                summary_result = newsletter_manager.process_newsletters(days=days_to_analyze, send_email=True)
                 
-                # Vérifier si le résultat est un succès (True ou chaîne non vide)
+                # Vérifier le résultat
                 if summary_result is True or (isinstance(summary_result, str) and summary_result.strip()):
                     self.logger.info(f"📄 Résumé IA généré et email envoyé avec succès pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
                     return True
+                elif summary_result is None:
+                    self.logger.info(f"ℹ️ Aucun email trouvé pour {user_info['email']} - Traitement réussi mais rien à traiter")
+                    return True  # Pas d'erreur, juste rien à traiter
                 else:
                     self.logger.error(f"❌ Échec génération résumé IA pour {user_info['email']}")
                     self.logger.error(f"❌ Vérifiez les credentials Google et les permissions Gmail")
@@ -310,8 +310,6 @@ class AutoBriefScheduler:
             gist_id = os.getenv('GIST_ID')
             gist_token = os.getenv('GIST_TOKEN')
             
-            self.logger.info(f"🔍 GIST_ID: {gist_id[:10]}..." if gist_id else "❌ GIST_ID manquant")
-            self.logger.info(f"🔍 GIST_TOKEN: {'présent' if gist_token else 'manquant'}")
             
             if not gist_id or not gist_token:
                 self.logger.error("❌ GIST_ID ou GIST_TOKEN manquant")
@@ -324,8 +322,6 @@ class AutoBriefScheduler:
             }
             
             response = requests.get(f'https://api.github.com/gists/{gist_id}', headers=headers)
-            
-            self.logger.info(f"🔍 Réponse API GitHub Gist: {response.status_code}")
             
             if response.status_code == 200:
                 gist_data = response.json()

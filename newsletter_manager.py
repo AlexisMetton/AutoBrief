@@ -809,13 +809,11 @@ class NewsletterManager:
         
         # Créer la requête
         query = self.get_query_for_emails(newsletters, days)
-        print(f"🔍 Requête Gmail: {query}")
         
         # Récupérer les messages
         try:
             results = service.users().messages().list(userId='me', q=query).execute()
             messages = results.get('messages', [])
-            print(f"🔍 Messages trouvés: {len(messages)}")
             
             if not messages:
                 return None
@@ -842,9 +840,7 @@ class NewsletterManager:
 
     def process_newsletters(self, days=7, send_email=False):
         """Traite toutes les newsletters et génère le résumé"""
-        print(f"🔍 Début process_newsletters - days: {days}, send_email: {send_email}")
         newsletters = self.get_newsletters()
-        print(f"🔍 Newsletters récupérées: {newsletters}")
         if not newsletters:
             if hasattr(st, 'error'):
                 st.error("Aucune newsletter configurée")
@@ -852,9 +848,7 @@ class NewsletterManager:
                 print("❌ Aucune newsletter configurée")
             return None
         
-        print(f"🔍 Récupération service Gmail...")
         service = self.auth.get_gmail_service()
-        print(f"🔍 Service Gmail: {'✅ Disponible' if service else '❌ Non disponible'}")
         if not service:
             if hasattr(st, 'error'):
                 st.error("Impossible de se connecter à Gmail")
