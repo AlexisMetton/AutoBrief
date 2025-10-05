@@ -47,7 +47,12 @@ class AutoBriefScheduler:
                 return users
             
             import requests
-            response = requests.get(f'https://api.github.com/gists/{gist_id}')
+            headers = {'Accept': 'application/vnd.github.v3+json'}
+            gist_token = os.getenv('GIST_TOKEN')
+            if gist_token:
+                headers['Authorization'] = f'token {gist_token}'
+            
+            response = requests.get(f'https://api.github.com/gists/{gist_id}', headers=headers)
             
             if response.status_code == 200:
                 gist_data = response.json()
@@ -402,7 +407,12 @@ class AutoBriefScheduler:
             import requests
             
             # Charger les données actuelles du Gist
-            response = requests.get(f'https://api.github.com/gists/{gist_id}')
+            headers = {'Accept': 'application/vnd.github.v3+json'}
+            gist_token = os.getenv('GIST_TOKEN')
+            if gist_token:
+                headers['Authorization'] = f'token {gist_token}'
+            
+            response = requests.get(f'https://api.github.com/gists/{gist_id}', headers=headers)
             
             if response.status_code == 200:
                 gist_data = response.json()
@@ -423,10 +433,16 @@ class AutoBriefScheduler:
                             }
                         }
                         
+                        # Headers avec authentification
+                        headers = {'Accept': 'application/vnd.github.v3+json'}
+                        gist_token = os.getenv('GIST_TOKEN')
+                        if gist_token:
+                            headers['Authorization'] = f'token {gist_token}'
+                        
                         update_response = requests.patch(
                             f'https://api.github.com/gists/{gist_id}',
                             json=update_data,
-                            headers={'Accept': 'application/vnd.github.v3+json'}
+                            headers=headers
                         )
                         
                         if update_response.status_code == 200:
