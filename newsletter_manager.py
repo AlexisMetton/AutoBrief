@@ -412,6 +412,11 @@ class NewsletterManager:
                     headers=headers
                 )
                 
+                
+                if update_response.status_code == 200:
+                    return True
+                else:
+                    return False
             else:
                 # Pas de token Gist - sauvegarde en session uniquement
                 st.warning("""
@@ -899,17 +904,7 @@ class NewsletterManager:
                 if message:
                     body = self.get_message_body(message)
                     if body:
-                        # Debug pour voir le contenu analysé
-                        if hasattr(st, 'write'):
-                            st.write(f"🔍 Debug: Analyse email {idx + 1}, longueur: {len(body)} caractères")
-                            st.write(f"🔍 Debug: Premiers 200 caractères: {body[:200]}...")
-                        
                         summary = self.summarize_newsletter(body, custom_prompt)
-                        
-                        # Debug pour voir le résultat de l'IA
-                        if hasattr(st, 'write'):
-                            st.write(f"🔍 Debug: Résultat IA pour email {idx + 1}: '{summary}'")
-                        
                         if summary and len(summary.strip()) > 0:
                             summary = self.replace_redirected_links(summary)
                             output += f"**Source {idx + 1}:**\n{summary}\n\n"
