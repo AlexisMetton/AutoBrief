@@ -679,12 +679,13 @@ class NewsletterManager:
                 'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
                 'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
             }[schedule_day]
-            st.info(f"Planification : {frequency_text} le {day_text} à {paris_time.strftime('%H:%M')} heure de Paris (±30min)")
+            st.info(f"Planification : {frequency_text} le {day_text} à {paris_time.strftime('%H:%M')} heure française (±30min)")
         else:
-            st.info(f"Planification : {frequency_text} à {paris_time.strftime('%H:%M')} heure de Paris (±30min)")
+            st.info(f"Planification : {frequency_text} à {paris_time.strftime('%H:%M')} heure française (±30min)")
         
-        # Note sur la tolérance
+        # Note sur la tolérance et conversion
         st.caption("Tolérance de ±30 minutes pour compenser les délais d'automatisation GitHub Actions")
+        st.caption("Conversion automatique : heure française → UTC (GitHub Actions)")
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
@@ -764,14 +765,14 @@ class NewsletterManager:
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
                 .header { padding: 20px; text-align: center; margin-bottom: 20px; }
-                .header img { max-width: 40px; vertical-align: middle; margin-right: 10px; }
+                .header img { max-width: 80px; vertical-align: middle; margin-right: 10px; }
                 .header .brand { display: inline-block; vertical-align: middle; font-weight: bold; color: #667eea; font-size: 24px; }
-                .header .subtitle { color: #666; font-size: 16px; margin-top: 5px; }
+                .header .subtitle { color: #666; font-size: 18px; margin-top: 5px; }
                 .section { background: #f8f9fa; margin: 15px 0; padding: 15px; border-radius: 6px; border-left: 4px solid #667eea; }
                 .section-title { color: #2c3e50; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
                 .section-content { color: #555; }
                 .footer { padding: 15px; text-align: center; margin-top: 20px; }
-                .footer img { max-width: 30px; vertical-align: middle; margin-right: 10px; }
+                .footer img { max-width: 60px; vertical-align: middle; margin-right: 10px; }
                 .footer .brand { display: inline-block; vertical-align: middle; font-weight: bold; color: #667eea; }
                 .footer .subtitle { color: #666; font-size: 14px; margin-top: 5px; }
                 a { color: #667eea; text-decoration: none; }
@@ -897,7 +898,7 @@ class NewsletterManager:
                         summary = self.summarize_newsletter(body, custom_prompt)
                         if summary and len(summary.strip()) > 0:
                             summary = self.replace_redirected_links(summary)
-                            output += f"**Source {idx + 1}:**\n{summary}\n\n"
+                            output += summary
             
             # Envoyer par email si demandé
             if output and send_email:
@@ -975,13 +976,13 @@ class NewsletterManager:
             else:
                 message = self.get_message(service, msg['id'])
             
-            if message:
-                body = self.get_message_body(message)
-                if body:
-                    summary = self.summarize_newsletter(body, custom_prompt)
-                    if summary and len(summary.strip()) > 0:
-                        summary = self.replace_redirected_links(summary)
-                        output += f"**Source {idx + 1}:**\n{summary}\n\n"
+                if message:
+                    body = self.get_message_body(message)
+                    if body:
+                        summary = self.summarize_newsletter(body, custom_prompt)
+                        if summary and len(summary.strip()) > 0:
+                            summary = self.replace_redirected_links(summary)
+                        output += summary
             
             if progress_bar:
                 progress_bar.progress((idx + 1) / len(messages))

@@ -153,15 +153,22 @@ class AutoBriefScheduler:
                 else:
                     self.logger.info(f"Jour correct - {current_day}")
             
-            # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
+            # Convertir l'heure française vers UTC (soustraire 2h en été, 1h en hiver)
             target_hour = int(schedule_time.split(':')[0])
             target_minute = int(schedule_time.split(':')[1])
+            
+            # Conversion France -> UTC (UTC+2 en été, UTC+1 en hiver)
+            # Pour simplifier, on utilise UTC+2 (été) - ajustez si nécessaire
+            target_hour_utc = target_hour - 2
+            if target_hour_utc < 0:
+                target_hour_utc += 24
+            
             current_hour = now.hour
             current_minute = now.minute
             
             # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
-            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
-            self.logger.info(f"Heure - Actuelle: {current_hour}:{current_minute:02d}, Cible: {target_hour}:{target_minute:02d}, Diff: {time_diff}min")
+            time_diff = abs((current_hour * 60 + current_minute) - (target_hour_utc * 60 + target_minute))
+            self.logger.info(f"Heure - Actuelle (UTC): {current_hour}:{current_minute:02d}, Cible (France->UTC): {target_hour}:{target_minute:02d}->{target_hour_utc}:{target_minute:02d}, Diff: {time_diff}min")
             return time_diff <= 30
             
         except Exception as e:
