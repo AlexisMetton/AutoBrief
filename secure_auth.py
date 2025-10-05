@@ -30,7 +30,7 @@ class SecureAuth:
                         f.write(credentials_data)
                     return temp_file
                 except Exception as e:
-                    st.error(f"❌ Erreur lors de la lecture des credentials: {e}")
+                    st.error(f"Erreur lors de la lecture des credentials: {e}")
                     return None
         except Exception:
             # Pas de secrets Streamlit disponibles, continuer avec le fallback
@@ -38,7 +38,7 @@ class SecureAuth:
         
         # Fallback vers le fichier local
         if not os.path.exists(self.config.CREDENTIALS_PATH):
-            st.error("❌ Fichier credentials.json manquant. Veuillez le placer dans le répertoire du projet.")
+            st.error("Fichier credentials.json manquant. Veuillez le placer dans le répertoire du projet.")
             return None
         return self.config.CREDENTIALS_PATH
     
@@ -48,7 +48,7 @@ class SecureAuth:
             # Debug: afficher la SECRET_KEY utilisée pour le chiffrement
             secret_key = self.config.get_secret_key()
             if hasattr(st, 'info'):
-                st.info(f"🔧 SECRET_KEY utilisée pour chiffrement: {secret_key[:10]}...")
+                st.info(f"SECRET_KEY utilisée pour chiffrement: {secret_key[:10]}...")
             
             json_data = json.dumps(token_data)
             encrypted_data = self.encryption.encrypt(json_data.encode())
@@ -148,7 +148,7 @@ class SecureAuth:
         if 'authenticated' in st.session_state and st.session_state['authenticated']:
             return True
             
-        st.markdown("### 🔐 Authentification Google")
+        st.markdown("### Authentification Google")
         st.info("Pour utiliser AutoBrief, vous devez vous connecter avec votre compte Google.")
         
         # Vérifier si credentials.json existe
@@ -156,7 +156,7 @@ class SecureAuth:
             return False
             
         # Bouton de connexion
-        if st.button("🔑 Se connecter avec Google", type="primary"):
+        if st.button("Se connecter avec Google", type="primary"):
             try:
                 # Obtenir le fichier credentials (secrets Streamlit en priorité)
                 credentials_file = self.get_credentials_file()
@@ -181,7 +181,7 @@ class SecureAuth:
                 3. Copiez le code d'autorisation affiché
                 4. Collez-le dans le champ ci-dessous
                 
-                [🔗 Se connecter avec Google]({auth_url})
+                [Se connecter avec Google]({auth_url})
                 """)
                 
                 # Champ pour le code d'autorisation
@@ -198,22 +198,22 @@ class SecureAuth:
                         if self.save_encrypted_token(credentials):
                             st.session_state['authenticated'] = True
                             st.session_state['user_email'] = self.get_user_email(credentials)
-                            st.success("✅ Connexion réussie !")
+                            st.success("Connexion réussie !")
                             st.rerun()
                         else:
-                            st.error("❌ Erreur lors de la sauvegarde des credentials")
+                            st.error("Erreur lors de la sauvegarde des credentials")
                             
                     except Exception as e:
-                        st.error(f"❌ Erreur d'authentification: {e}")
-                        st.write(f"🔍 Détails de l'erreur: {str(e)}")
+                        st.error(f"Erreur d'authentification: {e}")
+                        st.write(f"Détails de l'erreur: {str(e)}")
                         
                         # Proposer de réessayer
-                        if st.button("🔄 Réessayer la connexion"):
+                        if st.button("Réessayer la connexion"):
                             st.session_state.pop('authenticated', None)
                             st.rerun()
                         
             except Exception as e:
-                st.error(f"❌ Erreur de configuration: {e}")
+                st.error(f"Erreur de configuration: {e}")
                 st.info("Vérifiez que le fichier credentials.json est présent et correct.")
                 
         return False
@@ -232,7 +232,7 @@ class SecureAuth:
         credentials = self.load_encrypted_token()
         
         if not credentials:
-            st.error("❌ Session expirée. Veuillez vous reconnecter.")
+            st.error("Session expirée. Veuillez vous reconnecter.")
             st.session_state['authenticated'] = False
             return None
             
@@ -245,7 +245,7 @@ class SecureAuth:
             service = build('gmail', 'v1', credentials=credentials)
             return service
         except Exception as e:
-            st.error(f"❌ Erreur de connexion Gmail: {e}")
+            st.error(f"Erreur de connexion Gmail: {e}")
             return None
     
     def logout(self):

@@ -76,17 +76,17 @@ class AutoBriefScheduler:
     def should_run_for_user(self, user_settings):
         """Vérifie si un résumé doit être généré pour cet utilisateur"""
         if not user_settings.get('auto_send', False):
-            self.logger.info("❌ Auto-send désactivé")
+            self.logger.info("Auto-send désactivé")
             return False
         
         # Vérifier d'abord le jour et l'heure
         if not self.is_scheduled_time(user_settings):
-            self.logger.info("⏰ Pas encore l'heure pour cet utilisateur")
+            self.logger.info("Pas encore l'heure pour cet utilisateur")
             return False
         
         last_run = user_settings.get('last_run')
         if not last_run:
-            self.logger.info("✅ Première exécution")
+            self.logger.info("Première exécution")
             return True
         
         try:
@@ -98,7 +98,7 @@ class AutoBriefScheduler:
             if frequency in ['daily', 'weekly', 'monthly']:
                 # Pour les planifications par jour/heure, on s'exécute toujours si c'est le bon moment
                 # On ne bloque pas les exécutions multiples le même jour
-                self.logger.info(f"✅ Planification par jour/heure - Exécution autorisée")
+                self.logger.info(f"Planification par jour/heure - Exécution autorisée")
                 return True
             else:
                 # Pour les autres fréquences, utiliser l'ancienne logique
@@ -112,14 +112,14 @@ class AutoBriefScheduler:
                     should_run = True
                 
                 if should_run:
-                    self.logger.info(f"✅ Temps d'exécution - Fréquence: {frequency}")
+                    self.logger.info(f"Temps d'exécution - Fréquence: {frequency}")
                 else:
-                    self.logger.info(f"⏳ Pas encore le temps - Fréquence: {frequency}")
+                    self.logger.info(f"Pas encore le temps - Fréquence: {frequency}")
                 
                 return should_run
             
         except Exception as e:
-            self.logger.error(f"❌ Erreur vérification fréquence: {e}")
+            self.logger.error(f"Erreur vérification fréquence: {e}")
             return True
         
         return False
@@ -137,10 +137,10 @@ class AutoBriefScheduler:
             # Vérifier le jour (pour les fréquences weekly/monthly)
             if user_settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
                 if current_day != schedule_day.lower():
-                    self.logger.info(f"📅 Jour incorrect - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
+                    self.logger.info(f"Jour incorrect - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
                     return False
                 else:
-                    self.logger.info(f"📅 Jour correct - {current_day}")
+                    self.logger.info(f"Jour correct - {current_day}")
             
             # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
             target_hour = int(schedule_time.split(':')[0])
@@ -150,11 +150,11 @@ class AutoBriefScheduler:
             
             # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
             time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
-            self.logger.info(f"⏰ Heure - Actuelle: {current_hour}:{current_minute:02d}, Cible: {target_hour}:{target_minute:02d}, Diff: {time_diff}min")
+            self.logger.info(f"Heure - Actuelle: {current_hour}:{current_minute:02d}, Cible: {target_hour}:{target_minute:02d}, Diff: {time_diff}min")
             return time_diff <= 30
             
         except Exception as e:
-            self.logger.error(f"❌ Erreur vérification horaire: {e}")
+            self.logger.error(f"Erreur vérification horaire: {e}")
             return True  # En cas d'erreur, on autorise l'exécution
     
     def send_email(self, to_email, subject, content):
@@ -174,8 +174,8 @@ class AutoBriefScheduler:
             env['SUBJECT'] = subject
             env['CONTENT_FILE'] = temp_content_file
             
-            self.logger.info(f"📧 Envoi email pour {to_email}")
-            self.logger.info(f"📧 Sujet: {subject}")
+            self.logger.info(f"Envoi email pour {to_email}")
+            self.logger.info(f"Sujet: {subject}")
             
             # Exécuter le script d'envoi d'email final
             result = subprocess.run(

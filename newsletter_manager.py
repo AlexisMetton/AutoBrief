@@ -60,11 +60,11 @@ class NewsletterManager:
             if data:
                 # Mettre à jour la session avec les nouvelles données
                 st.session_state['user_data_cache'] = data
-                st.success("✅ Données automatiquement rechargées depuis le Gist !")
+                st.success("Données automatiquement rechargées depuis le Gist !")
             else:
-                st.warning("⚠️ Aucune donnée trouvée dans le Gist")
+                st.warning("Aucune donnée trouvée dans le Gist")
         except Exception as e:
-            st.error(f"❌ Erreur lors du rechargement automatique: {e}")
+            st.error(f"Erreur lors du rechargement automatique: {e}")
     
     def _restore_session_from_token(self):
         """Restaure la session à partir du token chiffré"""
@@ -83,7 +83,7 @@ class NewsletterManager:
                         st.session_state['authenticated'] = True
                         st.session_state['last_user_email'] = user_email
                         
-                        st.success("✅ Session restaurée automatiquement !")
+                        st.success("Session restaurée automatiquement !")
                         return True
             
             return False
@@ -104,7 +104,7 @@ class NewsletterManager:
             
             if not gist_id:
                 st.warning("""
-                ⚠️ **Gist partagé non configuré**
+                **Gist partagé non configuré**
                 
                 Pour utiliser la persistance automatique :
                 1. Créez un Gist manuellement sur [gist.github.com](https://gist.github.com)
@@ -146,7 +146,7 @@ class NewsletterManager:
                         else:
                             # Vérifier que le token est bien configuré pour l'authentification
                             if gist_token:
-                                st.success("✅ Gist secret configuré avec authentification (sécurisé) !")
+                                st.success("Gist secret configuré avec authentification (sécurisé) !")
                                 st.info("""
                                 🔒 **Sécurité activée :**
                                 - Gist non listé publiquement
@@ -156,21 +156,21 @@ class NewsletterManager:
                                 return True
                             else:
                                 st.warning("""
-                                ⚠️ **Gist secret mais non sécurisé**
+                                **Gist secret mais non sécurisé**
                                 
                                 Le Gist est "secret" mais accessible via URL directe.
                                 Pour une vraie sécurité, configurez un token GitHub.
                                 """)
                                 return False
                     else:
-                        st.error(f"❌ Gist non accessible (Status: {response.status_code})")
+                        st.error(f"Gist non accessible (Status: {response.status_code})")
                         return False
                 except Exception as e:
-                    st.error(f"❌ Erreur vérification sécurité Gist: {e}")
+                    st.error(f"Erreur vérification sécurité Gist: {e}")
                     return False
             else:
                 st.warning("""
-                ⚠️ **Token Gist manquant**
+                **Token Gist manquant**
                 
                 Pour la sauvegarde automatique :
                 1. Créez un token GitHub avec le scope `gist`
@@ -317,22 +317,22 @@ class NewsletterManager:
                         }
                 except Exception as e:
                     if hasattr(st, 'warning'):
-                        st.warning(f"⚠️ Impossible de sauvegarder les credentials OAuth2: {e}")
+                        st.warning(f"Impossible de sauvegarder les credentials OAuth2: {e}")
             
             # Sauvegarder directement dans le Gist
             success = self.save_to_github_gist(data)
             
             if success:
                 if hasattr(st, 'success'):
-                    st.success("✅ Données sauvegardées automatiquement !")
+                    st.success("Données sauvegardées automatiquement !")
             else:
                 if hasattr(st, 'error'):
-                    st.error("❌ Erreur lors de la sauvegarde dans le Gist")
+                    st.error("Erreur lors de la sauvegarde dans le Gist")
             
             return success
         except Exception as e:
             if hasattr(st, 'error'):
-                st.error(f"❌ Erreur lors de la sauvegarde: {e}")
+                st.error(f"Erreur lors de la sauvegarde: {e}")
             return False
     
     
@@ -360,7 +360,7 @@ class NewsletterManager:
                     print("❌ GIST_ID non configuré dans les variables d'environnement")
                 else:
                     st.warning("""
-                    ⚠️ **Gist partagé non configuré**
+                    **Gist partagé non configuré**
                     
                     Pour utiliser la persistance automatique :
                     1. Le développeur doit créer un Gist manuellement
@@ -416,7 +416,7 @@ class NewsletterManager:
                     'Authorization': f'token {gist_token}'
                 }
             else:
-                st.error("❌ Token GIST_TOKEN manquant dans les secrets Streamlit")
+                st.error("Token GIST_TOKEN manquant dans les secrets Streamlit")
                 return False
             
             if gist_token:
@@ -429,17 +429,17 @@ class NewsletterManager:
                 
                 if update_response.status_code == 200:
                     if hasattr(st, 'success'):
-                        st.success("✅ Données sauvegardées automatiquement dans le Gist !")
+                        st.success("Données sauvegardées automatiquement dans le Gist !")
                     return True
                 else:
                     if hasattr(st, 'error'):
-                        st.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
+                        st.error(f"Erreur lors de la mise à jour du Gist: {update_response.status_code}")
                         st.info("Vérifiez que le token Gist est correct dans les secrets")
                     return False
             else:
                 # Pas de token Gist - sauvegarde en session uniquement
                 st.warning("""
-                ⚠️ **Token Gist manquant**
+                **Token Gist manquant**
                     
                     Pour la sauvegarde automatique :
                     1. Créez un token GitHub avec le scope `gist`
@@ -450,7 +450,7 @@ class NewsletterManager:
                 return False
             
         except Exception as e:
-            st.error(f"❌ Erreur GitHub Gist: {e}")
+            st.error(f"Erreur GitHub Gist: {e}")
             return False
     
     
@@ -579,23 +579,23 @@ class NewsletterManager:
                 if st.button("Ajouter", type="primary"):
                     if new_email and "@" in new_email:
                         if self.add_newsletter(new_email):
-                            st.success(f"✅ Newsletter {new_email} ajoutée")
+                            st.success(f"Newsletter {new_email} ajoutée")
                             st.rerun()
                         else:
                             pass
                     else:
-                        st.error("❌ Veuillez entrer une adresse email valide")
+                        st.error("Veuillez entrer une adresse email valide")
         
         # Liste des newsletters
         newsletters = self.get_newsletters()
         if newsletters:
-            st.markdown("#### 📋 Newsletters surveillées")
+            st.markdown("#### Newsletters surveillées")
             for i, email in enumerate(newsletters):
                 col1, col2 = st.columns([4, 1])
                 with col1:
-                    st.write(f"📧 {email}")
+                    st.write(f"{email}")
                 with col2:
-                    if st.button("🗑️", key=f"delete_{i}", help="Supprimer"):
+                    if st.button("Supprimer", key=f"delete_{i}"):
                         self.remove_newsletter(email)
                         st.rerun()
         else:
@@ -683,10 +683,10 @@ class NewsletterManager:
             }
             
             if self.save_user_settings(new_settings):
-                st.success("✅ Paramètres sauvegardés !")
+                st.success("Paramètres sauvegardés !")
                 st.rerun()
             else:
-                st.error("❌ Erreur lors de la sauvegarde")
+                st.error("Erreur lors de la sauvegarde")
         
         # Statut de la planification
         if auto_send:
@@ -718,7 +718,7 @@ class NewsletterManager:
             response = service.users().messages().list(userId='me', q=query).execute()
             return response.get('messages', [])
         except Exception as e:
-            st.error(f"❌ Erreur lors de la récupération des emails: {e}")
+            st.error(f"Erreur lors de la récupération des emails: {e}")
             return []
     
     def get_message(self, service, msg_id):
@@ -726,7 +726,7 @@ class NewsletterManager:
         try:
             return service.users().messages().get(userId='me', id=msg_id).execute()
         except Exception as e:
-            st.error(f"❌ Erreur lors de la récupération du message: {e}")
+            st.error(f"Erreur lors de la récupération du message: {e}")
             return None
     
     def get_message_body(self, message):
@@ -740,7 +740,7 @@ class NewsletterManager:
             else:
                 return base64.urlsafe_b64decode(message['payload']['body']['data']).decode('utf-8')
         except Exception as e:
-            st.error(f"❌ Erreur lors de l'extraction du contenu: {e}")
+            st.error(f"Erreur lors de l'extraction du contenu: {e}")
             return None
     
     def resolve_url(self, url):
@@ -794,7 +794,7 @@ class NewsletterManager:
             else:
                 return ""
         except Exception as e:
-            st.error(f"❌ Erreur OpenAI: {e}")
+            st.error(f"Erreur OpenAI: {e}")
             return ""
     
     def process_newsletters_scheduler(self, days=7, send_email=False):
@@ -843,17 +843,17 @@ class NewsletterManager:
         newsletters = self.get_newsletters()
         if not newsletters:
             if hasattr(st, 'error'):
-                st.error("❌ Aucune newsletter configurée")
+                st.error("Aucune newsletter configurée")
             else:
-                print("❌ Aucune newsletter configurée")
+                print("Aucune newsletter configurée")
             return None
         
         service = self.auth.get_gmail_service()
         if not service:
             if hasattr(st, 'error'):
-                st.error("❌ Impossible de se connecter à Gmail")
+                st.error("Impossible de se connecter à Gmail")
             else:
-                print("❌ Impossible de se connecter à Gmail")
+                print("Impossible de se connecter à Gmail")
             return None
         
         # Créer la requête
@@ -869,15 +869,15 @@ class NewsletterManager:
         
         if not messages:
             if hasattr(st, 'warning'):
-                st.warning("⚠️ Aucun email trouvé pour la période sélectionnée")
+                st.warning("Aucun email trouvé pour la période sélectionnée")
             else:
-                print("⚠️ Aucun email trouvé pour la période sélectionnée")
+                print("Aucun email trouvé pour la période sélectionnée")
             return None
         
         if hasattr(st, 'success'):
-            st.success(f"✅ {len(messages)} emails trouvés")
+            st.success(f"{len(messages)} emails trouvés")
         else:
-            print(f"✅ {len(messages)} emails trouvés")
+            print(f"{len(messages)} emails trouvés")
         
         # Traiter chaque message
         output = ""
@@ -935,7 +935,7 @@ class NewsletterManager:
             # Configuration Gmail (utilise les mêmes credentials OAuth2)
             service = self.auth.get_gmail_service()
             if not service:
-                st.error("❌ Impossible d'accéder à Gmail pour l'envoi")
+                st.error("Impossible d'accéder à Gmail pour l'envoi")
                 return False
             
             # Créer le message
@@ -964,10 +964,10 @@ class NewsletterManager:
             # Envoyer l'email
             sent_message = service.users().messages().send(userId='me', body=raw_message).execute()
             
-            st.success(f"✅ Résumé envoyé par email à {notification_email}")
+            st.success(f"Résumé envoyé par email à {notification_email}")
             return True
             
         except Exception as e:
-            st.error(f"❌ Erreur lors de l'envoi: {e}")
+            st.error(f"Erreur lors de l'envoi: {e}")
             return False
 
