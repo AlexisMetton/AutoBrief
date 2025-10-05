@@ -787,10 +787,8 @@ class NewsletterManager:
     
     def summarize_newsletter(self, content, custom_prompt=""):
         """Utilise OpenAI pour extraire les actualités IA"""
-        # Limiter le contenu à 8000 caractères pour éviter les dépassements
-        if len(content) > 8000:
-            content = content[:8000]
-            print(f"🔍 DEBUG: Contenu tronqué à 8000 caractères")
+        if len(content) > 32000:
+            content = content[:32000]
         
         # Template HTML pour l'email
         html_template = """
@@ -903,6 +901,13 @@ class NewsletterManager:
             print(f"🔍 DEBUG: Contenu réponse: '{response_content[:100]}...'")
             if hasattr(st, 'info'):
                 st.info(f"📄 Contenu reçu: '{response_content[:100]}...'")
+            
+            # Afficher la réponse complète de ChatGPT
+            print(f"🔍 DEBUG: RÉPONSE COMPLÈTE CHATGPT:")
+            print(f"'{response_content}'")
+            if hasattr(st, 'write'):
+                st.write("🔍 **Réponse complète ChatGPT:**")
+                st.code(response_content, language="json")
             
             try:
                 data = json.loads(response_content)
