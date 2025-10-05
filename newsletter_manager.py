@@ -776,8 +776,8 @@ class NewsletterManager:
         <body>
             <div class="header">
                 <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief" style="max-width: 80px; margin-bottom: 10px;">
-                <h1>AutoBrief - Résumé IA</h1>
-                <p>Actualités Intelligence Artificielle du {date}</p>
+                <h1>AutoBrief - Résumé</h1>
+                <p>Actualités du {date}</p>
             </div>
             
             {sections}
@@ -791,31 +791,38 @@ class NewsletterManager:
         """
         
         # Prompt de base amélioré
-        base_prompt = f"""Analysez la newsletter suivante et extrayez toutes les actualités liées à l'IA. 
-            Gardez tous les liens vers les sources d'information. Ne gardez pas les liens d'affiliation, 
+        base_prompt = f"""Analysez la newsletter suivante et extrayez toutes les actualités importantes. 
+            Ne Gardez pas tous les liens vers les sources d'information. Ne gardez pas les liens d'affiliation, 
             d'auto-promotion, substack et les liens vers d'autres articles du même auteur. 
             Ne gardez pas de référence à l'auteur, à la newsletter ou à substack.
             
             IMPORTANT: 
             - Le résumé doit être en français
             - Gardez toutes les informations importantes et résumez-les ou expliquez-les
-            - Utilisez EXACTEMENT ce template HTML pour structurer votre réponse :
+            - Vous DEVEZ utiliser EXACTEMENT ce template HTML pour votre réponse :
             
             {html_template}
             
-            - Remplacez {{date}} par la date actuelle
+            - Remplacez {{date}} par la date actuelle (format: DD/MM/YYYY)
             - Remplacez {{sections}} par vos sections d'actualités
             - Chaque actualité doit être dans une div avec class="section"
             - Chaque section doit avoir un titre dans une div avec class="section-title"
             - Le contenu va dans une div avec class="section-content"
             - Une actualité par section
-            - Si aucune actualité IA n'est trouvée, retournez une chaîne vide"""
+            - IMPORTANT: Retournez TOUT le HTML complet, pas juste les sections
+            - Si aucune actualité importante n'est trouvée, retournez une chaîne vide
+            
+            EXEMPLE de structure attendue :
+            <div class="section">
+                <div class="section-title">Titre de l'actualité</div>
+                <div class="section-content">Résumé avec liens...</div>
+            </div>"""
         
         # Ajouter le prompt personnalisé s'il existe
         if custom_prompt and custom_prompt.strip():
-            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités IA trouvées. Si aucune actualité IA n'est trouvée, retournez une chaîne vide."
+            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Si aucune actualité importante n'est trouvée, retournez une chaîne vide."
         else:
-            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités IA trouvées. Si aucune actualité IA n'est trouvée, retournez une chaîne vide."
+            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Si aucune actualité importante n'est trouvée, retournez une chaîne vide."
         
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
@@ -832,7 +839,11 @@ class NewsletterManager:
             data = json.loads(response.choices[0].message.content)
             
             if 'result' in data and isinstance(data['result'], str):
-                return data['result']
+                result = data['result']
+                # Debug pour voir ce que l'IA génère
+                if hasattr(st, 'write'):
+                    st.write(f"🔍 Debug: HTML généré par l'IA (premiers 500 caractères): {result[:500]}...")
+                return result
             else:
                 return ""
         except Exception as e:
