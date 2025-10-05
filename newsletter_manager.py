@@ -787,8 +787,10 @@ class NewsletterManager:
     
     def summarize_newsletter(self, content, custom_prompt=""):
         """Utilise OpenAI pour extraire les actualités IA"""
-        if len(content) > 32000:
-            content = content[:32000]
+        # Limiter le contenu à 8000 caractères pour éviter les dépassements
+        if len(content) > 8000:
+            content = content[:8000]
+            print(f"🔍 DEBUG: Contenu tronqué à 8000 caractères")
         
         # Template HTML pour l'email
         html_template = """
