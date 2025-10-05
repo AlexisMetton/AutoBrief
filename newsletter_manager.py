@@ -761,47 +761,60 @@ class NewsletterManager:
             content_preview = body[:500] if body else ""
             
             # Utiliser l'IA pour détecter si c'est promotionnel
-            prompt = f"""Analysez cet email et déterminez s'il s'agit d'un email promotionnel ou d'un contenu éditorial/informatif.
+            prompt = f"""Analysez cet email et déterminez s'il s'agit d'un email promotionnel ou d'un contenu éditorial.
 
 Sujet: {subject}
-Contenu (extrait): {content_preview}
+Contenu: {content_preview}
 
-Un email promotionnel contient généralement:
-- Des offres, réductions, codes promo
-- Des produits à vendre
-- Des publicités
-- Des liens d'affiliation
-- Des appels à l'action commerciaux
-
-Un contenu éditorial contient généralement:
-- Des actualités, analyses, articles
-- Des informations éducatives
-- Du contenu journalistique
-- Des newsletters d'information
-
-Répondez uniquement par "PROMOTIONNEL" ou "EDITORIAL" selon votre analyse."""
+Répondez uniquement par "PROMOTIONNEL" ou "EDITORIAL"."""
 
             messages = [
                 {"role": "system", "content": "You are a helpful assistant that classifies emails."},
                 {"role": "user", "content": prompt}
             ]
             
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                max_tokens=10
-            )
-            
-            result = response.choices[0].message.content.strip().upper()
-            is_promotional = "PROMOTIONNEL" in result
-            
-            print(f"🔍 DEBUG: Classification email - Sujet: '{subject[:50]}...' → {result}")
-            return is_promotional
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=messages,
+                    max_tokens=20,
+                    temperature=0.1
+                )
+                
+                result = response.choices[0].message.content.strip().upper()
+                is_promotional = "PROMOTIONNEL" in result
+                
+                print(f"🔍 DEBUG: Classification email - Sujet: '{subject[:50]}...' → {result}")
+                return is_promotional
+                
+            except Exception as e:
+                print(f"❌ DEBUG: Erreur classification IA: {e}")
+                # En cas d'erreur IA, utiliser une détection basique par mots-clés
+                return self.is_promotional_basic(subject, content_preview)
             
         except Exception as e:
             print(f"❌ DEBUG: Erreur classification email: {e}")
             # En cas d'erreur, considérer comme non-promotionnel pour ne pas perdre de contenu
             return False
+    
+    def is_promotional_basic(self, subject, content):
+        """Détection basique par mots-clés (fallback si l'IA échoue)"""
+        promotional_keywords = [
+            'offre', 'réduction', 'promo', 'code', 'rabais', 'discount',
+            'vente', 'achat', 'commander', 'boutique', 'shop', 'store',
+            'spécial', 'limité', 'urgent', 'profitez', 'économisez',
+            'gratuit', 'free', 'deal', 'bargain', 'sale', 'clearance'
+        ]
+        
+        text_to_analyze = f"{subject} {content}".lower()
+        
+        for keyword in promotional_keywords:
+            if keyword in text_to_analyze:
+                print(f"🔍 DEBUG: Mot-clé promotionnel détecté: '{keyword}'")
+                return True
+        
+        print(f"🔍 DEBUG: Aucun mot-clé promotionnel détecté")
+        return False
     
     def summarize_newsletter(self, content, custom_prompt=""):
         """Utilise OpenAI pour extraire les actualités IA"""
