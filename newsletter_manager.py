@@ -779,9 +779,19 @@ class NewsletterManager:
             )
             
             data = json.loads(response.choices[0].message.content)
+            
+            # Debug pour voir la réponse de l'IA
+            if hasattr(st, 'write'):
+                st.write(f"🔍 Debug IA: Réponse complète = {data}")
+            
             if 'result' in data and isinstance(data['result'], str):
-                return data['result']
+                result = data['result']
+                if hasattr(st, 'write'):
+                    st.write(f"🔍 Debug IA: Résultat extrait = '{result}'")
+                return result
             else:
+                if hasattr(st, 'write'):
+                    st.write(f"🔍 Debug IA: Pas de 'result' valide dans la réponse")
                 return ""
         except Exception as e:
             st.error(f"Erreur OpenAI: {e}")
