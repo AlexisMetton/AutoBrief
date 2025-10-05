@@ -911,13 +911,23 @@ class NewsletterManager:
             else:
                 message = self.get_message(service, msg['id'])
             
-                if message:
-                    body = self.get_message_body(message)
-                    if body:
-                        summary = self.summarize_newsletter(body, custom_prompt)
-                        if summary and len(summary.strip()) > 0:
-                            summary = self.replace_redirected_links(summary)
-                            output += f"**Source {idx + 1}:**\n{summary}\n\n"
+            # Debug pour voir si les emails sont récupérés
+            if hasattr(st, 'write'):
+                st.write(f"🔍 Email {idx + 1}: Message récupéré = {message is not None}")
+            
+            if message:
+                body = self.get_message_body(message)
+                if hasattr(st, 'write'):
+                    st.write(f"🔍 Email {idx + 1}: Body extrait = {body is not None}, longueur = {len(body) if body else 0}")
+                
+                if body:
+                    summary = self.summarize_newsletter(body, custom_prompt)
+                    if hasattr(st, 'write'):
+                        st.write(f"🔍 Email {idx + 1}: Résumé IA = '{summary}'")
+                    
+                    if summary and len(summary.strip()) > 0:
+                        summary = self.replace_redirected_links(summary)
+                        output += f"**Source {idx + 1}:**\n{summary}\n\n"
             
             if progress_bar:
                 progress_bar.progress((idx + 1) / len(messages))
