@@ -745,6 +745,64 @@ class NewsletterManager:
             summary = summary.replace(match, resolved_url)
         return summary
     
+    def is_promotional_email(self, message):
+        """Détecte si un email est promotionnel en analysant le sujet et le contenu"""
+        try:
+            # Extraire le sujet
+            headers = message['payload'].get('headers', [])
+            subject = ""
+            for header in headers:
+                if header['name'].lower() == 'subject':
+                    subject = header['value']
+                    break
+            
+            # Extraire un extrait du contenu (premiers 5fix00 caractères)
+            body = self.get_message_body(message)
+            content_preview = body[:500] if body else ""
+            
+            # Utiliser l'IA pour détecter si c'est promotionnel
+            prompt = f"""Analysez cet email et déterminez s'il s'agit d'un email promotionnel ou d'un contenu éditorial/informatif.
+
+Sujet: {subject}
+Contenu (extrait): {content_preview}
+
+Un email promotionnel contient généralement:
+- Des offres, réductions, codes promo
+- Des produits à vendre
+- Des publicités
+- Des liens d'affiliation
+- Des appels à l'action commerciaux
+
+Un contenu éditorial contient généralement:
+- Des actualités, analyses, articles
+- Des informations éducatives
+- Du contenu journalistique
+- Des newsletters d'information
+
+Répondez uniquement par "PROMOTIONNEL" ou "EDITORIAL" selon votre analyse."""
+
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant that classifies emails."},
+                {"role": "user", "content": prompt}
+            ]
+            
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                max_tokens=10
+            )
+            
+            result = response.choices[0].message.content.strip().upper()
+            is_promotional = "PROMOTIONNEL" in result
+            
+            print(f"🔍 DEBUG: Classification email - Sujet: '{subject[:50]}...' → {result}")
+            return is_promotional
+            
+        except Exception as e:
+            print(f"❌ DEBUG: Erreur classification email: {e}")
+            # En cas d'erreur, considérer comme non-promotionnel pour ne pas perdre de contenu
+            return False
+    
     def summarize_newsletter(self, content, custom_prompt=""):
         """Utilise OpenAI pour extraire les actualités IA"""
         if len(content) > 32000:
@@ -987,44 +1045,69 @@ class NewsletterManager:
         else:
             print(f"{len(messages)} emails trouvés")
         
-        # Traiter chaque message
-        output = ""
+        # Filtrer les emails promotionnels avant le traitement
+        filtered_messages = []
         if hasattr(st, 'progress'):
             progress_bar = st.progress(0)
         else:
             progress_bar = None
         
-        print(f"🔍 DEBUG: Traitement de {len(messages)} messages")
+        print(f"🔍 DEBUG: Filtrage de {len(messages)} messages")
         
         for idx, msg in enumerate(messages):
-            print(f"🔍 DEBUG: Traitement message {idx + 1}/{len(messages)}")
+            print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)}")
             if hasattr(st, 'spinner'):
-                with st.spinner(f"Traitement de l'email {idx + 1}/{len(messages)}..."):
+                with st.spinner(f"Analyse de l'email {idx + 1}/{len(messages)}..."):
                     message = self.get_message(service, msg['id'])
             else:
                 message = self.get_message(service, msg['id'])
             
             if message:
-                body = self.get_message_body(message)
-                if body:
-                    print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
-                    summary = self.summarize_newsletter(body, custom_prompt)
-                    print(f"🔍 DEBUG: Résumé IA généré: {len(summary) if summary else 0} caractères")
-                    if summary and len(summary.strip()) > 0:
-                        summary = self.replace_redirected_links(summary)
-                        output += summary
-                        print(f"✅ DEBUG: Résumé ajouté à l'output")
-                    else:
-                        print("❌ DEBUG: Résumé vide ou invalide")
+                # Analyser le message pour détecter s'il est promotionnel
+                is_promotional = self.is_promotional_email(message)
+                if is_promotional:
+                    print(f"🚫 DEBUG: Email {idx + 1} détecté comme promotionnel - ignoré")
                 else:
-                    print("❌ DEBUG: Impossible d'extraire le corps du message")
+                    print(f"✅ DEBUG: Email {idx + 1} validé comme contenu éditorial")
+                    filtered_messages.append(msg)
             else:
                 print("❌ DEBUG: Impossible de récupérer le message")
             
             if progress_bar:
                 progress_bar.progress((idx + 1) / len(messages))
         
-        print(f"🔍 DEBUG: Output final: {len(output)} caractères")
+        print(f"🔍 DEBUG: {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
+        
+        # Traiter seulement les emails non-promotionnels
+        all_content = ""
+        for idx, msg in enumerate(filtered_messages):
+            print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
+            message = self.get_message(service, msg['id'])
+            
+            if message:
+                body = self.get_message_body(message)
+                if body:
+                    print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
+                    # Ajouter un séparateur entre les emails
+                    if all_content:
+                        all_content += "\n\n--- NOUVEL EMAIL ---\n\n"
+                    all_content += body
+                    print(f"✅ DEBUG: Contenu éditorial ajouté")
+                else:
+                    print("❌ DEBUG: Impossible d'extraire le corps du message")
+            else:
+                print("❌ DEBUG: Impossible de récupérer le message")
+        
+        print(f"🔍 DEBUG: Contenu éditorial global: {len(all_content)} caractères")
+        
+        # Générer un seul résumé pour tous les emails non-promotionnels
+        if all_content.strip():
+            print(f"🔍 DEBUG: Génération du résumé global...")
+            output = self.summarize_newsletter(all_content, custom_prompt)
+            print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
+        else:
+            output = ""
+            print("❌ DEBUG: Aucun contenu éditorial à traiter")
         
         # Mettre à jour la date de dernière exécution
         if output:
