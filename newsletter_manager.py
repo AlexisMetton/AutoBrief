@@ -668,20 +668,15 @@ class NewsletterManager:
         # Statut de la planification
         frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[frequency]
         
-        # Convertir l'heure UTC vers l'heure de Paris (UTC+1/+2)
-        import pytz
-        utc_time = pytz.UTC.localize(datetime.combine(datetime.today(), schedule_time))
-        paris_tz = pytz.timezone('Europe/Paris')
-        paris_time = utc_time.astimezone(paris_tz)
-        
+        # Afficher directement l'heure programmée (déjà en heure française)
         if frequency == 'weekly':
             day_text = {
                 'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
                 'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
             }[schedule_day]
-            st.info(f"Planification : {frequency_text} le {day_text} à {paris_time.strftime('%H:%M')} heure française (±30min)")
+            st.info(f"Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
         else:
-            st.info(f"Planification : {frequency_text} à {paris_time.strftime('%H:%M')} heure française (±30min)")
+            st.info(f"Planification : {frequency_text} à {schedule_time} heure française (±30min)")
         
         # Note sur la tolérance et conversion
         st.caption("Tolérance de ±30 minutes pour compenser les délais d'automatisation GitHub Actions")
@@ -965,7 +960,7 @@ class NewsletterManager:
         # Traiter chaque message
         output = ""
         if hasattr(st, 'progress'):
-            progress_bar = st.progress(0)
+        progress_bar = st.progress(0)
         else:
             progress_bar = None
         
@@ -985,7 +980,7 @@ class NewsletterManager:
                         output += summary
             
             if progress_bar:
-                progress_bar.progress((idx + 1) / len(messages))
+            progress_bar.progress((idx + 1) / len(messages))
         
         # Mettre à jour la date de dernière exécution
         if output:
