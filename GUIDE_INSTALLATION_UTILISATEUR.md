@@ -1,14 +1,6 @@
-# 📚 Guide d'Installation Complet - AutoBrief
+# Guide d'Installation Complet - AutoBrief
 
 Ce guide vous accompagne étape par étape pour déployer votre propre instance d'AutoBrief.
-
-## 🎯 Vue d'ensemble
-
-AutoBrief est une application qui :
-- 📧 **Analyse vos newsletters Gmail** avec l'IA
-- ⏰ **Envoie des résumés automatiques** selon votre planning
-- 💾 **Sauvegarde vos données** dans GitHub Gist
-- 🚀 **Fonctionne automatiquement** via GitHub Actions
 
 ## 🚀 Étape 1 : Fork du Repository
 
@@ -80,20 +72,34 @@ L'application va se déployer automatiquement. Cela peut prendre 2-5 minutes.
 
 ## 🔐 Étape 4 : Configuration des Secrets
 
-### 4.1 Obtenir la Clé OpenAI
+### 4.1 Listes des secrets à créer
 
-1. Allez sur [platform.openai.com](https://platform.openai.com)
-2. Créez un compte ou connectez-vous
-3. Allez dans **"API Keys"**
-4. Cliquez sur **"Create new secret key"**
-5. Copiez la clé (commence par `sk-`)
+| Secret | Description | Où l'obtenir |
+|--------|-------------|--------------|
+| `OPENAI_API_KEY` | Clé API OpenAI | [platform.openai.com](https://platform.openai.com) |
+| `SECRET_KEY` | Clé de chiffrement | [SECRET_KEY_GENERATOR.md](SECRET_KEY_GENERATOR.md)  |
+| `GIST_ID` | ID du Gist GitHub | [gist.github.com](https://gist.github.com) |
+| `GIST_TOKEN` | Token GitHub | GitHub Settings > Developer settings |
+| `GOOGLE_CREDENTIALS` | Credentials OAuth2 | Contenu du fichier `credentials.json` |
+| `API_KEY` | Clé API pour GitHub Actions | [SECRET_KEY_GENERATOR.md](SECRET_KEY_GENERATOR.md) |
 
-### 4.2 Générer une Clé Secrète
+### 4.2 Configurer les Secrets GitHub
+### 7.1 Activer GitHub Actions
 
-1. Allez sur votre application Streamlit déployée
-2. Allez dans **"🔧 Configuration"**
-3. Cliquez sur **"Générer une nouvelle clé secrète"**
-4. Copiez la clé générée
+1. Allez dans votre repository GitHub > Cliquez sur l'onglet **"Actions"** > Si GitHub Actions n'est pas activé, cliquez sur **"I understand my workflows, go ahead and enable them"**
+
+2. Puis, allez dans **Settings > Secrets and variables > Actions**
+
+3. Ajoutez ces secrets :
+
+```
+OPENAI_API_KEY = "sk-..."
+SECRET_KEY = "votre-clé-secrète"
+GOOGLE_CREDENTIALS = "contenu-json-des-credentials"
+GIST_ID = "votre-gist-id"
+GIST_TOKEN = "ghp_..."
+API_KEY = "clé-api-aléatoire"
+```
 
 ### 4.3 Configurer les Secrets Streamlit
 
@@ -107,44 +113,21 @@ OPENAI_API_KEY = "sk-..."
 SECRET_KEY = "votre-clé-secrète-32-caractères"
 GIST_ID = "votre-gist-id"
 GIST_TOKEN = "ghp_..."
+GOOGLE_CREDENTIALS = "contenu-json-complet-des-credentials"
+API_KEY = "clé-api-aléatoire-pour-sécurité"
 ```
-
-**Note :** Les credentials Google OAuth2 sont maintenant automatiquement sauvegardés dans le Gist lors de la première connexion.
 
 ## 📧 Étape 5 : Configuration Gmail
 
 ### 5.1 Première Connexion
 
-1. Dans votre application Streamlit, cliquez sur **"🔑 Se connecter avec Google"**
+1. Dans votre application Streamlit, cliquez sur **"Se connecter avec Google"**
 2. Autorisez l'accès à Gmail
 3. **Important** : Assurez-vous d'autoriser les permissions `gmail.readonly` et `gmail.send`
 
-### 5.2 Authentification Automatique
+## 💾 Étape 6 : Configuration GitHub Gist
 
-**✅ Nouveau :** Les credentials OAuth2 sont maintenant automatiquement sauvegardés dans le Gist lors de la première connexion. Plus besoin de les copier manuellement !
-
-## 🤖 Étape 6 : Activation de l'Automatisation
-
-### 6.1 Configuration du Planning
-
-1. Dans votre application Streamlit, allez dans **"🤖 Scheduler"**
-2. Configurez votre planning :
-   - **Fréquence** : Quotidien, Hebdomadaire, ou Mensuel
-   - **Jour** : Pour les planifications hebdomadaires/mensuelles
-   - **Heure** : Heure UTC d'exécution
-   - **Email de notification** : Votre adresse email
-
-### 6.2 Fonctionnalités Automatiques
-
-**✅ Une fois configuré, tout est automatique :**
-- **Authentification** → Tokens OAuth2 sauvegardés automatiquement
-- **Génération IA** → Résumés créés sans intervention
-- **Envoi d'email** → Notifications envoyées selon le planning
-- **Multi-utilisateurs** → Chaque utilisateur a ses propres credentials
-
-## 💾 Étape 7 : Configuration GitHub Gist
-
-### 7.1 Créer un Gist Secret
+### 6.1 Créer un Gist Secret
 
 1. Allez sur [gist.github.com](https://gist.github.com)
 2. Créez un nouveau Gist **secret** (pas public !)
@@ -155,9 +138,6 @@ GIST_TOKEN = "ghp_..."
 ```
 5. Cliquez sur **"Create secret gist"**
 6. Copiez l'ID du Gist (dans l'URL : `gist.github.com/VOTRE-USERNAME/ID-DU-GIST`)
-
-> ⚠️ **Important :** Un Gist "secret" n'est pas vraiment privé ! Il est accessible via URL directe.
-> Pour une vraie sécurité, vous DEVEZ configurer un token GitHub (étape suivante).
 
 ### 6.2 Créer un Token GitHub
 
@@ -213,7 +193,7 @@ API_KEY = "clé-api-aléatoire-pour-sécurité"
 
 ### 8.1 Ajouter des Newsletters
 
-1. Dans votre application Streamlit, allez dans **"📧 Newsletters"**
+1. Dans votre application Streamlit, allez dans **"Newsletters"**
 2. Cliquez sur **"Ajouter une newsletter"**
 3. Ajoutez les adresses email des newsletters à suivre
 4. Configurez les paramètres :
@@ -221,19 +201,10 @@ API_KEY = "clé-api-aléatoire-pour-sécurité"
    - **Jours d'analyse** : combien de jours d'emails analyser
    - **Email de notification** : où envoyer le résumé
 
-### 8.2 Configurer la Planification
-
-1. Allez dans **"🤖 Scheduler"**
-2. Activez **"Envoi automatique"**
-3. Configurez :
-   - **Jour** : jour de la semaine
-   - **Heure** : heure d'envoi (UTC)
-4. Sauvegardez
-
 ### 8.3 Test
 
-1. Cliquez sur **"🧪 Tester la newsletter"**
-2. Vérifiez que vous recevez un email avec le résumé IA
+1. Cliquez sur **"Tester la newsletter"**
+2. Vérifiez que vous recevez un email avec le résumé
 
 ## ✅ Vérification Finale
 
@@ -255,32 +226,18 @@ API_KEY = "clé-api-aléatoire-pour-sécurité"
 
 **❌ Erreur "redirect_uri_mismatch"**
 - Vérifiez que vous utilisez un client "Desktop Application"
-- L'URI de redirection doit être `urn:ietf:wg:oauth:2.0:oob`
 
 **❌ Erreur "Gmail API has not been used"**
 - Activez l'API Gmail dans Google Cloud Console
 
 **❌ Erreur "401 Unauthorized" sur le Gist**
-- Vérifiez que votre Gist est public
+- Vérifiez que votre Gist existe
 - Vérifiez que votre token GitHub a la scope "gist"
 
 **❌ GitHub Actions échoue**
 - Vérifiez que tous les secrets GitHub sont configurés
 - Vérifiez les logs dans l'onglet "Actions"
 
-### Support
-
-- 📖 **Documentation** : [README.md](README.md)
-- 🐛 **Issues** : [GitHub Issues](https://github.com/VOTRE-USERNAME/AutoBrief/issues)
-
 ---
 
 **🎉 Félicitations ! Votre AutoBrief est maintenant opérationnel !**
-
-Votre application va maintenant :
-- ✅ Analyser automatiquement vos newsletters Gmail
-- ✅ Générer des résumés IA intelligents
-- ✅ Vous envoyer des emails selon votre planning
-- ✅ Sauvegarder vos données automatiquement
-
-**Profitez de vos résumés automatiques !** 📧✨

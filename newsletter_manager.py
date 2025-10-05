@@ -900,8 +900,6 @@ class NewsletterManager:
                 .section-title { color: #2c3e50; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
                 .section-content { color: #555; }
                 .footer { padding: 15px; text-align: center; margin-top: 20px; }
-                .footer img { max-width: 60px; vertical-align: middle; margin-right: 10px; }
-                .footer .brand { display: inline-block; vertical-align: middle; font-weight: bold; color: #667eea; }
                 .footer .subtitle { color: #666; font-size: 14px; margin-top: 5px; }
                 a { color: #667eea; text-decoration: none; }
                 a:hover { text-decoration: underline; }
@@ -917,8 +915,6 @@ class NewsletterManager:
             {sections}
             
             <div class="footer">
-                <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief">
-                <span class="brand">AutoBrief</span>
                 <div class="subtitle">Généré automatiquement par AutoBrief</div>
             </div>
         </body>

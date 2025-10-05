@@ -1,12 +1,12 @@
-# 🔐 Générateur de SECRET_KEY pour AutoBrief
+# Générateur de SECRET_KEY pour AutoBrief
 
 ## 🎯 **Qu'est-ce que SECRET_KEY ?**
 
 La `SECRET_KEY` est une **clé de chiffrement** qui :
-- ✅ **Chiffre vos tokens** OAuth (connexion Gmail)
-- ✅ **Protège vos sessions** utilisateur
-- ✅ **Sécurise les données** sensibles
-- ✅ **32 caractères** minimum pour la sécurité
+- **Chiffre vos tokens** OAuth (connexion Gmail)
+- **Protège vos sessions** utilisateur
+- **Sécurise les données** sensibles
+- **32 caractères** minimum pour la sécurité
 
 ## 🚀 **Comment générer votre SECRET_KEY :**
 
@@ -47,7 +47,7 @@ Créez une chaîne de **32 caractères** avec :
 - ❌ **Ne partagez JAMAIS** votre SECRET_KEY
 - ❌ **Ne la commitez JAMAIS** dans Git
 - ❌ **Ne l'écrivez JAMAIS** dans le code
-- ✅ **Stockez-la** uniquement dans les secrets Streamlit
+- ✅ **Stockez-la** uniquement dans les secrets Streamlit et GitHub Actions
 
 ### **Exemples de SECRET_KEY valides :**
 ```
@@ -63,7 +63,6 @@ SECRET_KEY=AutoBrief2024!@#$%^&*()_+-=[]{}|;':",./<>?
 2. Cliquez sur "Settings" → "Secrets"
 3. Ajoutez :
    ```
-   OPENAI_API_KEY=sk-votre_cle_openai_ici
    SECRET_KEY=votre_cle_secrete_32_caracteres
    ```
 4. Cliquez sur "Save"
@@ -71,21 +70,10 @@ SECRET_KEY=AutoBrief2024!@#$%^&*()_+-=[]{}|;':",./<>?
 ## ✅ **Vérification :**
 
 Votre SECRET_KEY est correcte si :
-- ✅ **32 caractères** ou plus
-- ✅ **Contient** lettres, chiffres, symboles
-- ✅ **Unique** et **aléatoire**
-- ✅ **Stockée** uniquement dans les secrets
-
-## 🆘 **Problèmes courants :**
-
-### **"SECRET_KEY too short"**
-- Solution : Utilisez au moins 32 caractères
-
-### **"SECRET_KEY not found"**
-- Solution : Vérifiez l'orthographe dans les secrets
-
-### **"Invalid SECRET_KEY"**
-- Solution : Utilisez des caractères alphanumériques + symboles
+- **32 caractères** ou plus
+- **Contient** lettres, chiffres, symboles
+- **Unique** et **aléatoire**
+- **Stockée** uniquement dans les secrets
 
 ---
 

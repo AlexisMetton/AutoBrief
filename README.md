@@ -1,15 +1,15 @@
-# 📧 AutoBrief - Résumé Automatique de Newsletters
+# AutoBrief - Résumé Automatique de Newsletters
 
 AutoBrief est une application Streamlit qui génère automatiquement des résumés intelligents de vos newsletters Gmail grâce à l'IA, avec planification automatique via GitHub Actions.
 
 ## ✨ Fonctionnalités
 
-- 🔐 **Authentification Google** - Connexion sécurisée avec votre compte Gmail
-- 📧 **Analyse IA** - Résumé intelligent de vos newsletters avec OpenAI
-- ⏰ **Planification automatique** - Envoi automatique selon votre planning
-- 💾 **Persistance des données** - Sauvegarde automatique dans GitHub Gist
-- 🚀 **Déploiement Streamlit Cloud** - Application hébergée gratuitement
-- 🤖 **Automatisation GitHub Actions** - Planification et exécution automatiques
+- **Authentification Google** - Connexion sécurisée avec votre compte Gmail
+- **Analyse IA** - Résumé intelligent de vos newsletters avec OpenAI
+- **Planification automatique** - Envoi automatique selon votre planning
+- **Persistance des données** - Sauvegarde automatique dans GitHub Gist
+- **Déploiement Streamlit Cloud** - Application hébergée gratuitement
+- **Automatisation GitHub Actions** - Planification et exécution automatiques
 
 ## 🚀 Installation Rapide
 
@@ -35,9 +35,9 @@ OPENAI_API_KEY = "sk-..."
 SECRET_KEY = "votre-clé-secrète-32-caractères"
 GIST_ID = "votre-gist-id"
 GIST_TOKEN = "ghp_..."
+GOOGLE_CREDENTIALS = "contenu-json-des-credentials"
+API_KEY = "clé-api-aléatoire"
 ```
-
-**Note :** Les credentials Google OAuth2 sont maintenant automatiquement sauvegardés dans le Gist lors de la première connexion.
 
 ## 🔧 Configuration Google OAuth
 
@@ -68,7 +68,7 @@ GIST_TOKEN = "ghp_..."
 
 Le scheduler GitHub Actions s'exécute automatiquement toutes les heures et vérifie si un résumé doit être généré selon votre planning configuré.
 
-**✅ Fonctionnalités automatiques :**
+**Fonctionnalités automatiques :**
 - **Authentification automatique** → Tokens OAuth2 sauvegardés dans le Gist
 - **Génération IA automatique** → Résumés créés sans intervention
 - **Envoi d'email automatique** → Notifications envoyées selon le planning
@@ -79,15 +79,8 @@ Le scheduler GitHub Actions s'exécute automatiquement toutes les heures et vér
 Dans l'interface Streamlit, vous pouvez configurer :
 - **Fréquence** : Quotidien, Hebdomadaire, Mensuel
 - **Jour** : Pour les planifications hebdomadaires/mensuelles
-- **Heure** : Heure UTC d'exécution
+- **Heure** : Heure d'exécution
 - **Email de notification** : Adresse pour recevoir les résumés
-
-### Activation de l'Automatisation
-
-1. Allez dans **"🤖 Scheduler"** de votre application Streamlit
-2. Configurez votre planning et votre email de notification
-3. Les credentials OAuth2 sont automatiquement sauvegardés lors de la première connexion
-4. GitHub Actions se charge du reste automatiquement
 
 ## 💾 Configuration GitHub Gist
 
@@ -146,20 +139,13 @@ Le scheduler s'exécute automatiquement toutes les heures et vérifie votre plan
 ### 1. Configuration des Newsletters
 
 1. Connectez-vous à votre application Streamlit
-2. Allez dans **"📧 Newsletters"**
+2. Allez dans **"Newsletters"**
 3. Ajoutez les adresses email des newsletters à suivre
 4. Configurez les paramètres (fréquence, jours d'analyse, etc.)
 
-### 2. Planification
-
-1. Allez dans **"🤖 Scheduler"**
-2. Activez l'**envoi automatique**
-3. Configurez le jour et l'heure d'envoi
-4. Laissez GitHub Actions gérer le reste !
-
 ### 3. Test
 
-Utilisez le bouton **"🧪 Tester la newsletter"** pour générer un résumé immédiatement.
+Utilisez le bouton **"Tester la newsletter"** pour générer un résumé immédiatement.
 
 ## 🏗️ Architecture
 
@@ -169,31 +155,21 @@ Utilisez le bouton **"🧪 Tester la newsletter"** pour générer un résumé im
 │   Application   │◄──►│   Scheduler      │◄──►│   Persistence   │
 │                 │    │                  │    │                 │
 │ • Interface     │    │ • Planification  │    │ • Données       │
-│ • Configuration │    │ • Génération IA  │    │ • Utilisateurs  │
-│ • Authentification│   │ • Envoi emails  │    │ • Settings      │
+│ • Configuration │    │ • Filtrage       │    │ • Utilisateurs  │
+│ • Authentification│   │ • Nettoyage     │    │ • Settings      │
+│ • Test newsletter│    │ • Génération IA │    │ • Credentials   │
+│ • Filtrage promo│    │ • Envoi emails   │    │ • Chiffrement   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-## 🔧 Développement Local
-
-### Installation
-
-```bash
-git clone https://github.com/VOTRE-USERNAME/AutoBrief.git
-cd AutoBrief
-pip install -r requirements.txt
-```
-
-### Configuration
-
-1. Copiez `env.example` vers `.env`
-2. Remplissez vos clés API
-3. Lancez avec `streamlit run streamlit_app.py`
-
-### Test du Scheduler
-
-```bash
-python scheduler.py
+        │                        │                        │
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Gmail API     │    │   OpenAI API     │    │   GitHub API    │
+│                 │    │                  │    │                 │
+│ • Lecture       │    │ • GPT-3.5-turbo  │    │ • Gist access   │
+│ • Filtrage      │    │ • Résumé IA      │    │ • Token auth    │
+│ • Envoi emails  │    │ • HTML généré    │    │ • Données crypt │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
 ## 📋 Secrets Requis
@@ -201,60 +177,16 @@ python scheduler.py
 | Secret | Description | Où l'obtenir |
 |--------|-------------|--------------|
 | `OPENAI_API_KEY` | Clé API OpenAI | [platform.openai.com](https://platform.openai.com) |
-| `SECRET_KEY` | Clé de chiffrement | Générateur dans l'app |
+| `SECRET_KEY` | Clé de chiffrement | [SECRET_KEY_GENERATOR.md](SECRET_KEY_GENERATOR.md)  |
 | `GIST_ID` | ID du Gist GitHub | [gist.github.com](https://gist.github.com) |
 | `GIST_TOKEN` | Token GitHub | GitHub Settings > Developer settings |
-| `GOOGLE_CREDENTIALS` | Credentials OAuth2 | Via l'application Streamlit |
-| `API_KEY` | Clé API pour GitHub Actions | Clé aléatoire |
-
-## 🔒 Sécurité
-
-### ⚠️ **IMPORTANT : Sécurité Gist Obligatoire**
-
-**NE JAMAIS utiliser un Gist public !** Cela exposerait les tokens OAuth2 de tous les utilisateurs.
-
-- ✅ **Gist secret** - Non listé publiquement
-- ✅ **Token GitHub** - Authentification requise pour lire/écrire
-- ✅ **Chiffrement** - Tokens OAuth2 chiffrés dans le Gist (nouveau)
-- ❌ **Gist public** - DANGEREUX ! Expose tous les tokens
-- ⚠️ **Gist secret sans token** - Accessible via URL directe (non sécurisé)
-- 🚨 **Contenu visible** - Même secret, le contenu est lisible si URL connue
-- 🚫 **Gist invisible** - Impossible sur GitHub (limitation de la plateforme)
-
-### 🛡️ **Bonnes pratiques :**
-
-1. **Gist secret + Token** - Gist "secret" + Token GitHub obligatoire
-2. **Token GitHub sécurisé** - Utilisez un token avec scope "gist" uniquement
-3. **Révoquer les tokens** - Si compromis, révoquez immédiatement
-4. **Surveillance** - Vérifiez régulièrement l'accès au Gist
-5. **Ne pas partager l'URL** - L'URL du Gist doit rester confidentielle
-6. **Chiffrement des données** - Les tokens OAuth2 sont chiffrés dans le Gist (nouveau)
-7. **Accès limité** - Seuls les utilisateurs autorisés peuvent lire/écrire
-
-### 🚫 **Limitations GitHub Gist :**
-
-**GitHub Gist ne permet PAS :**
-- ❌ **Gist privé** (n'existe pas)
-- ❌ **Gist invisible** (n'existe pas)
-- ❌ **Permissions granulaires** (n'existe pas)
-- ❌ **Authentification utilisateur** (n'existe pas)
-
-### 🔄 **Alternatives pour vraie invisibilité :**
-
-| Solution | Invisibilité | Coût | Complexité |
-|----------|-------------|------|------------|
-| **GitHub Gist** | ⚠️ Semi-secret | Gratuit | Simple |
-| **Base de données** | ✅ Privé | Payant | Complexe |
-| **Fichiers locaux** | ✅ Privé | Gratuit | Limité |
-| **Cloud Storage** | ✅ Privé | Payant | Moyen |
-
-**Recommandation :** GitHub Gist + Chiffrement = **Sécurité maximale possible** 🔒
+| `GOOGLE_CREDENTIALS` | Credentials OAuth2 | Contenu du fichier `credentials.json` |
+| `API_KEY` | Clé API pour GitHub Actions | [SECRET_KEY_GENERATOR.md](SECRET_KEY_GENERATOR.md) |
 
 ## 🆘 Support
 
 - 📖 **Documentation complète** : [GUIDE_INSTALLATION_UTILISATEUR.md](GUIDE_INSTALLATION_UTILISATEUR.md)
 - 🔑 **Génération de clé** : [SECRET_KEY_GENERATOR.md](SECRET_KEY_GENERATOR.md)
-- 🐛 **Issues** : [GitHub Issues](https://github.com/VOTRE-USERNAME/AutoBrief/issues)
 
 ## 📄 Licence
 
