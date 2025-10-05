@@ -816,13 +816,16 @@ class NewsletterManager:
             <div class="section">
                 <div class="section-title">Titre de l'actualité</div>
                 <div class="section-content">Résumé avec liens...</div>
-            </div>"""
+            </div>
+            
+            Retournez votre réponse sous forme de JSON avec la structure suivante :
+            {{"result": "votre_html_complet_ici"}}"""
         
         # Ajouter le prompt personnalisé s'il existe
         if custom_prompt and custom_prompt.strip():
-            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Si aucune actualité importante n'est trouvée, retournez une chaîne vide."
+            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Retournez le résultat en JSON avec la clé 'result'. Si aucune actualité importante n'est trouvée, retournez {{'result': ''}}."
         else:
-            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Si aucune actualité importante n'est trouvée, retournez une chaîne vide."
+            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Retournez le résultat en JSON avec la clé 'result'. Si aucune actualité importante n'est trouvée, retournez {{'result': ''}}."
         
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
