@@ -235,9 +235,6 @@ def show_home_page(newsletter_manager):
                     user_data = newsletter_manager.load_user_data()
                     days_to_analyze = user_data.get('settings', {}).get('days_to_analyze', 7)
                     
-                    # Debug pour vérifier la valeur
-                    st.write(f"🔍 Debug: days_to_analyze = {days_to_analyze}")
-                    st.write(f"🔍 Debug: user_data settings = {user_data.get('settings', {})}")
                     
                     # Générer le résumé avec la configuration utilisateur
                     result = newsletter_manager.process_newsletters(days=days_to_analyze, send_email=True)

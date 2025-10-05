@@ -755,16 +755,67 @@ class NewsletterManager:
         if len(content) > 32000:
             content = content[:32000]
         
-        # Prompt de base
-        base_prompt = """From the following newsletter, extract all the news while keeping the 
-            links to sources of information. Do not keep any affiliate links, self-promotion links, substack links and links to other articles by 
-            the same author. Do not keep reference to the author, the newsletter or substack:"""
+        # Template HTML pour l'email
+        html_template = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+                .section { background: #f8f9fa; margin: 15px 0; padding: 15px; border-radius: 6px; border-left: 4px solid #667eea; }
+                .section-title { color: #2c3e50; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+                .section-content { color: #555; }
+                .footer { background: #2c3e50; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-top: 20px; }
+                .footer img { max-width: 150px; margin-top: 10px; }
+                a { color: #667eea; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief" style="max-width: 80px; margin-bottom: 10px;">
+                <h1>AutoBrief - Résumé IA</h1>
+                <p>Actualités Intelligence Artificielle du {date}</p>
+            </div>
+            
+            {sections}
+            
+            <div class="footer">
+                <p>Généré automatiquement par AutoBrief</p>
+                <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief">
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Prompt de base amélioré
+        base_prompt = f"""Analysez la newsletter suivante et extrayez toutes les actualités liées à l'IA. 
+            Gardez tous les liens vers les sources d'information. Ne gardez pas les liens d'affiliation, 
+            d'auto-promotion, substack et les liens vers d'autres articles du même auteur. 
+            Ne gardez pas de référence à l'auteur, à la newsletter ou à substack.
+            
+            IMPORTANT: 
+            - Le résumé doit être en français
+            - Gardez toutes les informations importantes et résumez-les ou expliquez-les
+            - Utilisez EXACTEMENT ce template HTML pour structurer votre réponse :
+            
+            {html_template}
+            
+            - Remplacez {{date}} par la date actuelle
+            - Remplacez {{sections}} par vos sections d'actualités
+            - Chaque actualité doit être dans une div avec class="section"
+            - Chaque section doit avoir un titre dans une div avec class="section-title"
+            - Le contenu va dans une div avec class="section-content"
+            - Une actualité par section
+            - Si aucune actualité IA n'est trouvée, retournez une chaîne vide"""
         
         # Ajouter le prompt personnalisé s'il existe
         if custom_prompt and custom_prompt.strip():
-            full_prompt = f"{base_prompt}\n\nAdditional instructions: {custom_prompt.strip()}\n\n{content}\nYou will output result as a JSON object, a dictionary with a single key 'result' which yields the extraction as a string. If there is no AI news in the newsletter, output an empty string."
+            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités IA trouvées. Si aucune actualité IA n'est trouvée, retournez une chaîne vide."
         else:
-            full_prompt = f"{base_prompt}\n\n{content}\nYou will output result as a JSON object, a dictionary with a single key 'result' which yields the extraction as a string. If there is no AI news in the newsletter, output an empty string."
+            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités IA trouvées. Si aucune actualité IA n'est trouvée, retournez une chaîne vide."
         
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
@@ -780,18 +831,9 @@ class NewsletterManager:
             
             data = json.loads(response.choices[0].message.content)
             
-            # Debug pour voir la réponse de l'IA
-            if hasattr(st, 'write'):
-                st.write(f"🔍 Debug IA: Réponse complète = {data}")
-            
             if 'result' in data and isinstance(data['result'], str):
-                result = data['result']
-                if hasattr(st, 'write'):
-                    st.write(f"🔍 Debug IA: Résultat extrait = '{result}'")
-                return result
+                return data['result']
             else:
-                if hasattr(st, 'write'):
-                    st.write(f"🔍 Debug IA: Pas de 'result' valide dans la réponse")
                 return ""
         except Exception as e:
             st.error(f"Erreur OpenAI: {e}")
@@ -911,20 +953,10 @@ class NewsletterManager:
             else:
                 message = self.get_message(service, msg['id'])
             
-            # Debug pour voir si les emails sont récupérés
-            if hasattr(st, 'write'):
-                st.write(f"🔍 Email {idx + 1}: Message récupéré = {message is not None}")
-            
             if message:
                 body = self.get_message_body(message)
-                if hasattr(st, 'write'):
-                    st.write(f"🔍 Email {idx + 1}: Body extrait = {body is not None}, longueur = {len(body) if body else 0}")
-                
                 if body:
                     summary = self.summarize_newsletter(body, custom_prompt)
-                    if hasattr(st, 'write'):
-                        st.write(f"🔍 Email {idx + 1}: Résumé IA = '{summary}'")
-                    
                     if summary and len(summary.strip()) > 0:
                         summary = self.replace_redirected_links(summary)
                         output += f"**Source {idx + 1}:**\n{summary}\n\n"
@@ -972,19 +1004,27 @@ class NewsletterManager:
             message['To'] = notification_email
             message['Subject'] = f"Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
             
-            # Corps du message
-            body = f"""
-            Bonjour,
-            
-            Voici votre résumé automatique des newsletters :
-            
-            {summary}
-            
-            ---
-            Généré automatiquement par AutoBrief
-            """
-            
-            message.attach(MIMEText(body, 'plain', 'utf-8'))
+            # Corps du message HTML
+            # Si le summary contient déjà du HTML, l'utiliser directement
+            if '<html>' in summary.lower() or '<body>' in summary.lower():
+                # Le summary est déjà en HTML, l'utiliser directement
+                message.attach(MIMEText(summary, 'html', 'utf-8'))
+            else:
+                # Sinon, créer un HTML basique
+                body = f"""
+                <html>
+                <body>
+                <h2>Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}</h2>
+                <p>Bonjour,</p>
+                <p>Voici votre résumé automatique des newsletters :</p>
+                <div>{summary}</div>
+                <hr>
+                <p><em>Généré automatiquement par AutoBrief</em></p>
+                <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief" style="max-width: 200px;">
+                </body>
+                </html>
+                """
+                message.attach(MIMEText(body, 'html', 'utf-8'))
             
             # Encoder le message
             raw_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
