@@ -763,28 +763,34 @@ class NewsletterManager:
             <meta charset="UTF-8">
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+                .header { padding: 20px; text-align: center; margin-bottom: 20px; }
+                .header img { max-width: 40px; vertical-align: middle; margin-right: 10px; }
+                .header .brand { display: inline-block; vertical-align: middle; font-weight: bold; color: #667eea; font-size: 24px; }
+                .header .subtitle { color: #666; font-size: 16px; margin-top: 5px; }
                 .section { background: #f8f9fa; margin: 15px 0; padding: 15px; border-radius: 6px; border-left: 4px solid #667eea; }
                 .section-title { color: #2c3e50; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
                 .section-content { color: #555; }
-                .footer { background: #2c3e50; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-top: 20px; }
-                .footer img { max-width: 150px; margin-top: 10px; }
+                .footer { padding: 15px; text-align: center; margin-top: 20px; }
+                .footer img { max-width: 30px; vertical-align: middle; margin-right: 10px; }
+                .footer .brand { display: inline-block; vertical-align: middle; font-weight: bold; color: #667eea; }
+                .footer .subtitle { color: #666; font-size: 14px; margin-top: 5px; }
                 a { color: #667eea; text-decoration: none; }
                 a:hover { text-decoration: underline; }
             </style>
         </head>
         <body>
             <div class="header">
-                <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief" style="max-width: 80px; margin-bottom: 10px;">
-                <h1>AutoBrief - Résumé</h1>
-                <p>Actualités du {date}</p>
+                <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief">
+                <span class="brand">AutoBrief</span>
+                <div class="subtitle">Actualités du {date}</div>
             </div>
             
             {sections}
             
             <div class="footer">
-                <p>Généré automatiquement par AutoBrief</p>
                 <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" alt="AutoBrief">
+                <span class="brand">AutoBrief</span>
+                <div class="subtitle">Généré automatiquement par AutoBrief</div>
             </div>
         </body>
         </html>
@@ -792,13 +798,14 @@ class NewsletterManager:
         
         # Prompt de base amélioré
         base_prompt = f"""Analysez la newsletter suivante et extrayez toutes les actualités importantes. 
-            Ne Gardez pas tous les liens vers les sources d'information. Ne gardez pas les liens d'affiliation, 
-            d'auto-promotion, substack et les liens vers d'autres articles du même auteur. 
+            Ne gardez AUCUN lien dans le résumé. Supprimez tous les liens d'affiliation, 
+            d'auto-promotion, substack, liens vers d'autres articles du même auteur et tous les autres liens. 
             Ne gardez pas de référence à l'auteur, à la newsletter ou à substack.
             
             IMPORTANT: 
             - Le résumé doit être en français
             - Gardez toutes les informations importantes et résumez-les ou expliquez-les
+            - IMPORTANT: Ne mettez AUCUN lien dans le contenu, seulement le texte des actualités
             - Vous DEVEZ utiliser EXACTEMENT ce template HTML pour votre réponse :
             
             {html_template}
@@ -810,6 +817,7 @@ class NewsletterManager:
             - Le contenu va dans une div avec class="section-content"
             - Une actualité par section
             - IMPORTANT: Retournez TOUT le HTML complet, pas juste les sections
+            - COMMENCEZ DIRECTEMENT par <!DOCTYPE html> - ne mettez rien avant
             - Si aucune actualité importante n'est trouvée, retournez une chaîne vide
             
             EXEMPLE de structure attendue :
@@ -823,9 +831,9 @@ class NewsletterManager:
         
         # Ajouter le prompt personnalisé s'il existe
         if custom_prompt and custom_prompt.strip():
-            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Retournez le résultat en JSON avec la clé 'result'. Si aucune actualité importante n'est trouvée, retournez {{'result': ''}}."
+            full_prompt = f"{base_prompt}\n\nInstructions supplémentaires: {custom_prompt.strip()}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. COMMENCEZ DIRECTEMENT par <!DOCTYPE html>. Retournez le résultat en JSON avec la clé 'result'. Si aucune actualité importante n'est trouvée, retournez {{'result': ''}}."
         else:
-            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. Retournez le résultat en JSON avec la clé 'result'. Si aucune actualité importante n'est trouvée, retournez {{'result': ''}}."
+            full_prompt = f"{base_prompt}\n\n{content}\n\nGénérez un email HTML complet en français avec toutes les actualités importantes trouvées. COMMENCEZ DIRECTEMENT par <!DOCTYPE html>. Retournez le résultat en JSON avec la clé 'result'. Si aucune actualité importante n'est trouvée, retournez {{'result': ''}}."
         
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
