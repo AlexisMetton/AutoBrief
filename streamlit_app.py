@@ -266,7 +266,7 @@ def show_home_page(newsletter_manager):
     if 'last_summary' in st.session_state:
         st.markdown("### <i class='fas fa-file-alt'></i> Dernier résumé généré", unsafe_allow_html=True)
         with st.expander("Voir le résumé", expanded=False):
-            st.markdown(st.session_state['last_summary'])
+            st.markdown(st.session_state['last_summary'], unsafe_allow_html=True)
 
 def show_newsletters_page(newsletter_manager):
     """Page de gestion des newsletters"""
