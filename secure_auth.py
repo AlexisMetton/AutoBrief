@@ -90,6 +90,7 @@ class SecureAuth:
         
         # Si on a des credentials externes (GitHub Actions), les utiliser
         if self.external_credentials:
+            print(f"🔍 External credentials présentes: {len(self.external_credentials)} caractères")
             try:
                 credentials_data = json.loads(self.external_credentials)
                 
@@ -103,10 +104,13 @@ class SecureAuth:
                     scopes=credentials_data.get('scopes', self.config.SCOPES)
                 )
                 
+                print(f"✅ Credentials externes chargées avec succès")
                 return credentials
             except Exception as e:
                 print(f"❌ Erreur chargement credentials externes: {e}")
                 return None
+        else:
+            print(f"❌ Aucune external credentials configurée")
         
         # Sinon, utiliser la session Streamlit
         if 'encrypted_token' not in st.session_state:
