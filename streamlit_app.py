@@ -6,12 +6,17 @@ from secure_auth import SecureAuth
 from newsletter_manager import NewsletterManager
 import json
 
+# Ajouter Font Awesome
+st.markdown("""
+<script src="https://kit.fontawesome.com/4b82313637.js" crossorigin="anonymous"></script>
+""", unsafe_allow_html=True)
+
 def create_header():
     """Crée le header avec logo seulement"""
     
     # CSS pour le header
-    st.markdown("""
-    <style>
+st.markdown("""
+<style>
     .main-header {
         background: white;
         border-bottom: 2px solid #e1e5e9;
@@ -36,11 +41,11 @@ def create_header():
         color: #2c3e50;
         margin: 0;
     }
-    </style>
-    """, unsafe_allow_html=True)
-    
+</style>
+""", unsafe_allow_html=True)
+
     # Header avec logo seulement
-    st.markdown("""
+st.markdown("""
     <div class="main-header">
         <div class="logo-container">
             <img src="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/logo_autobrief.png" 
@@ -52,7 +57,7 @@ def create_header():
 
 # Configuration de la page
 st.set_page_config(
-    page_title="AutoBrief - Veille IA Automatisée",
+    page_title="AutoBrief - Veille Automatisée",
     page_icon="https://raw.githubusercontent.com/AlexisMetton/AutoBrief/main/public/assets/favicon_autobrief.png",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -65,33 +70,107 @@ def main():
         config = Config()
         config.validate_config()
     except ValueError as e:
-        st.error(f"❌ Configuration manquante: {e}")
-        st.info("💡 Créez un fichier .env avec vos clés API (voir .env.example)")
+        st.error(f"<i class='fas fa-exclamation-triangle'></i> Configuration manquante: {e}")
+        st.info("<i class='fas fa-lightbulb'></i> Créez un fichier .env avec vos clés API (voir .env.example)")
         return
     
     auth = SecureAuth()
     newsletter_manager = NewsletterManager()
     
-    # Vérifier si un résumé automatique doit être généré
+    # Créer le header (toujours affiché)
+    create_header()
+        
+        # Authentification
+    if not auth.authenticate_user():
+        st.stop()
+        
+    # Vérifier si un résumé automatique doit être généré (APRÈS authentification)
     if newsletter_manager.should_run_automatically():
         with st.spinner("Génération automatique en cours..."):
-            result = newsletter_manager.process_newsletters()
+            # Récupérer la configuration utilisateur pour les jours à analyser
+            user_data = newsletter_manager.load_user_data()
+            days_to_analyze = user_data.get('settings', {}).get('days_to_analyze', 7)
+            
+            result = newsletter_manager.process_newsletters(days=days_to_analyze)
             if result:
                 st.session_state['last_summary'] = result
                 st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
                 st.success("Résumé automatique généré !")
                 st.rerun()
     
-    # Créer le header (toujours affiché)
-    create_header()
-    
-    # Authentification
-    if not auth.authenticate_user():
-        st.stop()
-    
     # Navigation avec session state
     if 'current_page' not in st.session_state:
         st.session_state.current_page = "Accueil"
+    
+    # CSS pour styliser la navigation Streamlit
+    st.markdown("""
+    <style>
+    /* Centrer et espacer les colonnes */
+    .st-emotion-cache-139jccg {
+        width: auto !important;
+        flex: none !important;
+    }
+    .st-emotion-cache-1permvm {
+        display: flex !important;
+        gap: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-width: 1rem !important;
+        flex-flow: wrap !important;
+        flex: 1 1 0% !important;
+        align-items: stretch !important;
+        overflow: visible !important;
+        justify-content: start !important;
+    }
+    .st-emotion-cache-18kf3ut {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 1rem !important;
+        height: auto !important;
+        align-content: center !important;
+    }
+
+        /* Styliser les boutons de navigation */
+    .st-key-nav_newsletters button, .st-key-nav_home button, .st-key-nav_settings button, .st-key-nav_help button {
+        background: transparent !important;
+        border: none !important;
+        color: #666 !important;
+        font-weight: 500 !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 4px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: none !important;
+    }
+    .st-key-nav_newsletters button:hover, .st-key-nav_home button:hover, .st-key-nav_settings button:hover, .st-key-nav_help button:hover {
+        color: #667eea !important;
+        background: #f8f9fa !important;
+    }
+    /* Bouton actif avec soulignement */
+    .st-key-nav_newsletters button[kind="primary"], .st-key-nav_home button[kind="primary"], .st-key-nav_settings button[kind="primary"], .st-key-nav_help button[kind="primary"] {
+        color: #667eea !important;
+        text-decoration: underline !important;
+        text-underline-offset: 4px !important;
+        text-decoration-thickness: 2px !important;
+    }
+    
+    .st-emotion-cache-1cl4umz {
+        background-color: #667eea !important;
+        border: 1px solid #667eea !important;
+    }
+
+    .st-emotion-cache-1cl4umz:hover, .st-emotion-cache-1cl4umz:focus-visible {
+        background-color: #6366f1 !important;
+        border-color: #6366f1 !important;
+    }
+
+    .st-emotion-cache-139jccg .st-emotion-cache-wfksaw {
+        justify-content: flex-end !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     # Navigation visible et fonctionnelle
     col1, col2, col3, col4 = st.columns(4)
@@ -124,7 +203,7 @@ def main():
             auth.logout()
         
         st.markdown("---")
-    
+        
     # Déterminer la page active
     page = st.session_state.current_page
     
@@ -141,52 +220,13 @@ def main():
 def show_home_page(newsletter_manager):
     """Page d'accueil avec vue d'ensemble"""
     
-    # Section hero
-    st.markdown("""
-    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin-bottom: 2rem;">
-        <h1 style="margin: 0; font-size: 2.5rem;">🤖 AutoBrief</h1>
-        <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem; opacity: 0.9;">Automatisez votre veille avec l'intelligence artificielle</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Métriques
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric(
-            label="Newsletters",
-            value=len(newsletter_manager.get_newsletters()),
-            delta=None
-        )
-    
-    with col2:
-        st.metric(
-            label="Dernière exécution",
-            value="Jamais" if 'last_run' not in st.session_state else st.session_state['last_run'],
-            delta=None
-        )
-    
-    with col3:
-        st.metric(
-            label="Emails traités",
-            value=st.session_state.get('processed_emails', 0),
-            delta=None
-        )
-    
-    with col4:
-        st.metric(
-            label="Status IA",
-            value="Actif" if st.session_state.get('openai_configured', False) else "Inactif",
-            delta=None
-        )
-    
     # Actions rapides
-    st.markdown("### Actions rapides")
+    st.markdown("### <i class='fas fa-bolt'></i> Actions rapides", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("Tester la newsletter", type="primary", use_container_width=True):
+        if st.button("Tester la newsletter", type="primary", use_container_width=True, icon=":material/play_arrow:"):
             if not newsletter_manager.get_newsletters():
                 st.error("Aucune newsletter configurée. Allez dans l'onglet 'Newsletters' pour en ajouter.")
             else:
@@ -206,7 +246,7 @@ def show_home_page(newsletter_manager):
                         st.error("Aucun contenu trouvé pour la période sélectionnée")
     
     with col2:
-        if st.button("Tester l'envoi", type="secondary", use_container_width=True):
+        if st.button("Tester l'envoi", type="secondary", use_container_width=True, icon=":material/send:"):
             settings = newsletter_manager.get_user_settings()
             notification_email = settings.get('notification_email')
             if notification_email and notification_email.strip():
@@ -221,53 +261,25 @@ def show_home_page(newsletter_manager):
             else:
                 st.warning("Configurez d'abord une adresse email de notification")
     
-    with col3:
-        if st.button("Gérer les newsletters", use_container_width=True):
-            st.session_state['current_page'] = "Newsletters"
-            st.rerun()
-    
     # Dernier résumé
     if 'last_summary' in st.session_state:
-        st.markdown("### Dernier résumé généré")
+        st.markdown("### <i class='fas fa-file-alt'></i> Dernier résumé généré", unsafe_allow_html=True)
         with st.expander("Voir le résumé", expanded=False):
             st.markdown(st.session_state['last_summary'])
 
 def show_newsletters_page(newsletter_manager):
     """Page de gestion des newsletters"""
-    st.markdown("## Gestion des Newsletters")
     
     newsletter_manager.render_newsletter_management()
-    
-    # Configuration de la période
-    st.markdown("### Configuration de la période")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        days = st.slider(
-            "Nombre de jours à analyser:",
-            min_value=1,
-            max_value=30,
-            value=7,
-            help="Période de recherche dans vos emails"
-        )
-    
-    with col2:
-        st.info(f"📅 Analyse des emails des {days} derniers jours")
 
 def show_configuration_page():
     """Page de configuration"""
-    st.markdown("## Configuration")
     
     # Configuration OpenAI
-    st.markdown("### Configuration OpenAI")
-    
-    if st.session_state.get('openai_configured', False):
-        st.success("Clé OpenAI configurée")
-    else:
-        st.warning("Clé OpenAI non configurée")
+    st.markdown("### <i class='fas fa-cog'></i> Configuration OpenAI", unsafe_allow_html=True)
     
     # Test de la configuration
-    if st.button("Tester la configuration"):
+    if st.button("Tester la configuration", icon=":material/check_circle:"):
         with st.spinner("Test en cours..."):
             try:
                 from openai import OpenAI
@@ -284,16 +296,16 @@ def show_configuration_page():
                 st.session_state['openai_configured'] = False
     
     # Affichage du token OAuth2
-    st.markdown("### Token OAuth2")
+    st.markdown("### <i class='fas fa-key'></i> Token OAuth2", unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("Afficher le contenu de token.json"):
+        if st.button("Afficher le contenu de token.json", icon=":material/visibility:"):
             st.session_state['show_token'] = True
     
     with col2:
-        if st.button("Masquer le token"):
+        if st.button("Masquer le token", icon=":material/visibility_off:"):
             st.session_state['show_token'] = False
     
     # Afficher le token si demandé
@@ -321,7 +333,7 @@ def show_configuration_page():
             st.error(f"Erreur lors de la lecture du token: {e}")
     
     # Informations système
-    st.markdown("### Informations système")
+    st.markdown("### <i class='fas fa-info-circle'></i> Informations système", unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
@@ -337,10 +349,9 @@ def show_configuration_page():
 
 def show_help_page():
     """Page d'aide"""
-    st.markdown("## Aide et Support")
     
     st.markdown("""
-    ### Comment utiliser AutoBrief
+    ### <i class='fa-solid fa-circle-question'></i> Comment utiliser AutoBrief
     
     **1. Configuration initiale:**
     - Assurez-vous d'avoir un fichier `.env` avec vos clés API

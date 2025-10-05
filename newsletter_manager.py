@@ -60,7 +60,6 @@ class NewsletterManager:
             if data:
                 # Mettre à jour la session avec les nouvelles données
                 st.session_state['user_data_cache'] = data
-                st.success("Données automatiquement rechargées depuis le Gist !")
             else:
                 st.warning("Aucune donnée trouvée dans le Gist")
         except Exception as e:
@@ -146,13 +145,7 @@ class NewsletterManager:
                         else:
                             # Vérifier que le token est bien configuré pour l'authentification
                             if gist_token:
-                                st.success("Gist secret configuré avec authentification (sécurisé) !")
-                                st.info("""
-                                🔒 **Sécurité activée :**
-                                - Gist non listé publiquement
-                                - Accès authentifié uniquement
-                                - Tokens OAuth2 protégés
-                                """)
+                                # Configuration sécurisée - pas de message de confirmation
                                 return True
                             else:
                                 st.warning("""
@@ -207,7 +200,7 @@ class NewsletterManager:
                         'days_to_analyze': 7,
                         'notification_email': '',
                         'last_run': None,
-                        'auto_send': False,
+                        'auto_send': True,
                         'schedule_day': 'monday',
                         'schedule_time': '09:00',
                         'schedule_timezone': 'UTC'
@@ -226,7 +219,7 @@ class NewsletterManager:
                     'days_to_analyze': 7,
                     'notification_email': '',
                     'last_run': None,
-                    'auto_send': False,
+                    'auto_send': True,
                     'schedule_day': 'monday',
                     'schedule_time': '09:00',
                     'schedule_timezone': 'UTC'
@@ -279,7 +272,7 @@ class NewsletterManager:
                                 'days_to_analyze': 7,
                                 'notification_email': '',
                                 'last_run': None,
-                                'auto_send': False,
+                                'auto_send': True,
                                 'schedule_day': 'monday',
                                 'schedule_time': '09:00',
                                 'schedule_timezone': 'UTC'
@@ -476,7 +469,7 @@ class NewsletterManager:
             'days_to_analyze': 7,
             'notification_email': '',
             'last_run': None,
-            'auto_send': False
+            'auto_send': True
         })
     
     def save_user_settings(self, settings):
@@ -564,10 +557,9 @@ class NewsletterManager:
     
     def render_newsletter_management(self):
         """Interface de gestion des newsletters"""
-        st.markdown("### 📧 Gestion des Newsletters")
         
         # Ajouter une newsletter
-        with st.expander("➕ Ajouter une newsletter", expanded=True):
+        with st.expander('<i class="fa-solid fa-circle-plus"></i> Ajouter une newsletter', expanded=True):
             col1, col2 = st.columns([3, 1])
             with col1:
                 new_email = st.text_input(
@@ -576,7 +568,7 @@ class NewsletterManager:
                     help="Entrez l'adresse email qui vous envoie les newsletters"
                 )
             with col2:
-                if st.button("Ajouter", type="primary"):
+                if st.button("Ajouter", type="primary", icon=":material/add:"):
                     if new_email and "@" in new_email:
                         if self.add_newsletter(new_email):
                             st.success(f"Newsletter {new_email} ajoutée")
@@ -589,53 +581,37 @@ class NewsletterManager:
         # Liste des newsletters
         newsletters = self.get_newsletters()
         if newsletters:
-            st.markdown("#### Newsletters surveillées")
+            st.markdown("#### <i class='fas fa-envelope'></i> Newsletters surveillées", unsafe_allow_html=True)
             for i, email in enumerate(newsletters):
                 col1, col2 = st.columns([4, 1])
                 with col1:
                     st.write(f"{email}")
                 with col2:
-                    if st.button("Supprimer", key=f"delete_{i}"):
+                    if st.button("Supprimer", key=f"delete_{i}", icon=":material/delete:"):
                         self.remove_newsletter(email)
                         st.rerun()
         else:
             pass
         
-        # Configuration de la planification automatique
-        st.markdown("---")
-        st.markdown("### ⏰ Planification automatique")
-        
-        pass
-        
-        # Note sur la persistance
-        st.markdown("---")
-        st.markdown("### 💾 Persistance des données")
-        
-        pass
         
         settings = self.get_user_settings()
         
         col1, col2 = st.columns(2)
         
         with col1:
-            auto_send = st.checkbox(
-                "🔄 Génération automatique",
-                value=settings.get('auto_send', False),
-                help="Active la génération automatique des résumés"
-            )
             
             frequency = st.selectbox(
-                "📅 Fréquence",
-                options=['daily', 'weekly', 'monthly'],
-                index=['daily', 'weekly', 'monthly'].index(settings.get('frequency', 'weekly')),
-                format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[x],
+                "Fréquence",
+                options=['daily', 'weekly'],
+                index=['daily', 'weekly'].index(settings.get('frequency', 'weekly')),
+                format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[x],
                 help="Fréquence de génération des résumés"
             )
             
             # Configuration du jour et de l'heure
-            if frequency in ['weekly', 'monthly']:
+            if frequency == 'weekly':
                 schedule_day = st.selectbox(
-                    "📆 Jour de la semaine",
+                    "Jour de la semaine",
                     options=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
                     index=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].index(settings.get('schedule_day', 'monday')),
                     format_func=lambda x: {
@@ -644,18 +620,20 @@ class NewsletterManager:
                     }[x],
                     help="Jour de la semaine pour l'envoi du résumé"
                 )
+                schedule_days = [schedule_day]
             else:
                 schedule_day = 'daily'
+                schedule_days = ['daily']
             
             schedule_time = st.time_input(
-                "⏰ Heure d'envoi (UTC)",
+                "Heure d'envoi (UTC)",
                 value=datetime.strptime(settings.get('schedule_time', '09:00'), '%H:%M').time(),
                 help="Heure d'envoi en UTC (GitHub Actions s'exécute à 09:00 UTC par défaut)"
             )
         
         with col2:
             days_to_analyze = st.slider(
-                "📊 Période d'analyse",
+                "Période d'analyse",
                 min_value=1,
                 max_value=30,
                 value=settings.get('days_to_analyze', 7),
@@ -663,19 +641,30 @@ class NewsletterManager:
             )
             
             notification_email = st.text_input(
-                "📧 Email de notification",
+                "Email de notification",
                 value=settings.get('notification_email', ''),
                 placeholder="votre.email@example.com",
                 help="Email pour recevoir les résumés automatiques (optionnel)"
             )
         
+        # Prompt personnalisé
+        st.markdown("#### <i class='fas fa-edit'></i> Prompt personnalisé", unsafe_allow_html=True)
+        custom_prompt = st.text_area(
+            "Instructions supplémentaires pour l'IA",
+            value=settings.get('custom_prompt', ''),
+            placeholder="Ajoutez ici des instructions spécifiques pour l'analyse des newsletters (ex: 'Focus sur les actualités tech', 'Ignorez les promotions', etc.)",
+            help="Ce texte sera ajouté au prompt de base pour personnaliser l'analyse des newsletters",
+            height=100
+        )
+        
         # Sauvegarder les paramètres
-        if st.button("💾 Sauvegarder les paramètres", type="primary"):
+        if st.button("Sauvegarder les paramètres", type="primary", icon=":material/save:"):
             new_settings = {
-                'auto_send': auto_send,
+                'auto_send': True,  # Toujours activé
                 'frequency': frequency,
                 'days_to_analyze': days_to_analyze,
                 'notification_email': notification_email,
+                'custom_prompt': custom_prompt,
                 'last_run': settings.get('last_run'),
                 'schedule_day': schedule_day,
                 'schedule_time': schedule_time.strftime('%H:%M'),
@@ -689,20 +678,25 @@ class NewsletterManager:
                 st.error("Erreur lors de la sauvegarde")
         
         # Statut de la planification
-        if auto_send:
-            frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[frequency]
-            if frequency in ['weekly', 'monthly']:
-                day_text = {
-                    'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
-                    'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
-                }[schedule_day]
-                schedule_text = f"{day_text} à {schedule_time.strftime('%H:%M')} UTC"
-            else:
-                schedule_text = f"Tous les jours à {schedule_time.strftime('%H:%M')} UTC"
-            
-            pass
+        frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[frequency]
+        
+        # Convertir l'heure UTC vers l'heure de Paris (UTC+1/+2)
+        import pytz
+        utc_time = pytz.UTC.localize(datetime.combine(datetime.today(), schedule_time))
+        paris_tz = pytz.timezone('Europe/Paris')
+        paris_time = utc_time.astimezone(paris_tz)
+        
+        if frequency == 'weekly':
+            day_text = {
+                'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
+                'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
+            }[schedule_day]
+            st.info(f"Planification : {frequency_text} le {day_text} à {paris_time.strftime('%H:%M')} heure de Paris (±30min)")
         else:
-            pass
+            st.info(f"Planification : {frequency_text} à {paris_time.strftime('%H:%M')} heure de Paris (±30min)")
+        
+        # Note sur la tolérance
+        st.caption("Tolérance de ±30 minutes pour compenser les délais d'automatisation GitHub Actions")
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
@@ -768,17 +762,25 @@ class NewsletterManager:
             summary = summary.replace(match, resolved_url)
         return summary
     
-    def summarize_newsletter(self, content):
+    def summarize_newsletter(self, content, custom_prompt=""):
         """Utilise OpenAI pour extraire les actualités IA"""
         if len(content) > 32000:
             content = content[:32000]
         
+        # Prompt de base
+        base_prompt = """From the following newsletter, extract all the news related to AI while keeping the 
+            links to sources of information. Do not keep any affiliate links, self-promotion links, substack links and links to other articles by 
+            the same author. Do not keep reference to the author, the newsletter or substack:"""
+        
+        # Ajouter le prompt personnalisé s'il existe
+        if custom_prompt and custom_prompt.strip():
+            full_prompt = f"{base_prompt}\n\nAdditional instructions: {custom_prompt.strip()}\n\n{content}\nYou will output result as a JSON object, a dictionary with a single key 'result' which yields the extraction as a string. If there is no AI news in the newsletter, output an empty string."
+        else:
+            full_prompt = f"{base_prompt}\n\n{content}\nYou will output result as a JSON object, a dictionary with a single key 'result' which yields the extraction as a string. If there is no AI news in the newsletter, output an empty string."
+        
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": f"""From the following newsletter, extract all the news related to AI while keeping the 
-            links to sources of information. Do not keep any affiliate links, self-promotion links, substack links and links to other articles by 
-            the same author. Do not keep reference to the author, the newsletter or substack:\n\n{content}\nYou will output result as a JSON object, a dictionary with a single key 'result' 
-            which yields the extraction as a string. If there is no AI news in the newsletter, output an empty string."""}
+            {"role": "user", "content": full_prompt}
         ]
         
         try:
@@ -807,6 +809,10 @@ class NewsletterManager:
         if not service:
             return None
         
+        # Récupérer le prompt personnalisé
+        settings = self.get_user_settings()
+        custom_prompt = settings.get('custom_prompt', '')
+        
         # Créer la requête
         query = self.get_query_for_emails(newsletters, days)
         
@@ -818,28 +824,38 @@ class NewsletterManager:
             if not messages:
                 return None
             
-            # Récupérer le contenu des messages
-            email_contents = []
-            for message in messages[:10]:  # Limiter à 10 messages
-                msg = service.users().messages().get(userId='me', id=message['id']).execute()
-                email_contents.append(self.extract_email_content(msg))
-            
-            # Générer le résumé avec l'IA
-            summary = self.generate_summary(email_contents)
+            # Traiter chaque message
+            output = ""
+            for idx, msg in enumerate(messages):
+                message = self.get_message(service, msg['id'])
+                
+                if message:
+                    body = self.get_message_body(message)
+                    if body:
+                        summary = self.summarize_newsletter(body, custom_prompt)
+                        if summary and len(summary.strip()) > 0:
+                            summary = self.replace_redirected_links(summary)
+                            output += f"**Source {idx + 1}:**\n{summary}\n\n"
             
             # Envoyer par email si demandé
-            if summary and send_email:
-                settings = self.get_user_settings()
+            if output and send_email:
                 notification_email = settings.get('notification_email')
                 if notification_email and notification_email.strip():
-                    self.send_summary_email(summary, notification_email)
+                    self.send_summary_email(output, notification_email)
             
-            return summary
+            return output if output.strip() else None
         except Exception as e:
             return None
 
     def process_newsletters(self, days=7, send_email=False):
         """Traite toutes les newsletters et génère le résumé"""
+        # Vérifier l'authentification avant de continuer
+        if not hasattr(st, 'session_state') or not st.session_state.get('authenticated', False):
+            # Si on n'est pas dans un contexte Streamlit ou pas authentifié, 
+            # on est probablement dans le scheduler - continuer silencieusement
+            if hasattr(st, 'error'):
+                return None
+        
         newsletters = self.get_newsletters()
         if not newsletters:
             if hasattr(st, 'error'):
@@ -856,13 +872,17 @@ class NewsletterManager:
                 print("❌ Impossible de se connecter à Gmail")
             return None
         
+        # Récupérer le prompt personnalisé
+        settings = self.get_user_settings()
+        custom_prompt = settings.get('custom_prompt', '')
+        
         # Créer la requête
         query = self.get_query_for_emails(newsletters, days)
         
         
         # Récupérer les messages
         if hasattr(st, 'spinner'):
-            with st.spinner("🔍 Recherche des emails..."):
+            with st.spinner("Recherche des emails..."):
                 messages = self.list_messages(service, query)
         else:
             messages = self.list_messages(service, query)
@@ -888,18 +908,18 @@ class NewsletterManager:
         
         for idx, msg in enumerate(messages):
             if hasattr(st, 'spinner'):
-                with st.spinner(f"📧 Traitement de l'email {idx + 1}/{len(messages)}..."):
+                with st.spinner(f"Traitement de l'email {idx + 1}/{len(messages)}..."):
                     message = self.get_message(service, msg['id'])
             else:
                 message = self.get_message(service, msg['id'])
             
-            if message:
-                body = self.get_message_body(message)
-                if body:
-                    summary = self.summarize_newsletter(body)
-                    if summary and len(summary.strip()) > 0:
-                        summary = self.replace_redirected_links(summary)
-                        output += f"**Source {idx + 1}:**\n{summary}\n\n"
+                if message:
+                    body = self.get_message_body(message)
+                    if body:
+                        summary = self.summarize_newsletter(body, custom_prompt)
+                        if summary and len(summary.strip()) > 0:
+                            summary = self.replace_redirected_links(summary)
+                            output += f"**Source {idx + 1}:**\n{summary}\n\n"
             
             if progress_bar:
                 progress_bar.progress((idx + 1) / len(messages))
@@ -942,7 +962,7 @@ class NewsletterManager:
             message = MIMEMultipart()
             message['From'] = service.users().getProfile(userId='me').execute()['emailAddress']
             message['To'] = notification_email
-            message['Subject'] = f"📰 Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
+            message['Subject'] = f"Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
             
             # Corps du message
             body = f"""

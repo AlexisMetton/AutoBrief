@@ -98,30 +98,35 @@ class AutoBriefScheduler:
             last_run_date = datetime.fromisoformat(last_run)
             frequency = user_settings.get('frequency', 'weekly')
             
-            # Pour les planifications par jour/heure, on ne vérifie pas la fréquence temporelle
-            # On s'exécute si c'est le bon jour et la bonne heure
-            if frequency in ['daily', 'weekly', 'monthly']:
-                # Pour les planifications par jour/heure, on s'exécute toujours si c'est le bon moment
-                # On ne bloque pas les exécutions multiples le même jour
-                self.logger.info(f"Planification par jour/heure - Exécution autorisée")
-                return True
+            # Vérifier la fréquence selon last_run (avec une marge de 30 minutes)
+            now = datetime.now()
+            time_margin = timedelta(minutes=30)  # Marge pour GitHub Actions
+            
+            if frequency == 'daily':
+                # Au moins 24h - 30min depuis la dernière exécution
+                should_run = now - last_run_date >= timedelta(days=1) - time_margin
+            elif frequency == 'weekly':
+                # Au moins 7 jours - 30min depuis la dernière exécution
+                should_run = now - last_run_date >= timedelta(weeks=1) - time_margin
             else:
-                # Pour les autres fréquences, utiliser l'ancienne logique
-                if frequency == 'daily':
-                    should_run = datetime.now() - last_run_date >= timedelta(days=1)
-                elif frequency == 'weekly':
-                    should_run = datetime.now() - last_run_date >= timedelta(weeks=1)
-                elif frequency == 'monthly':
-                    should_run = datetime.now() - last_run_date >= timedelta(days=30)
-                else:
-                    should_run = True
-                
-                if should_run:
-                    self.logger.info(f"Temps d'exécution - Fréquence: {frequency}")
-                else:
-                    self.logger.info(f"Pas encore le temps - Fréquence: {frequency}")
-                
-                return should_run
+                should_run = True  # Fréquence non reconnue, autoriser
+            
+            # Calculer le temps écoulé pour les logs
+            time_elapsed = now - last_run_date
+            if frequency == 'daily':
+                required_time = timedelta(days=1) - time_margin
+            elif frequency == 'weekly':
+                required_time = timedelta(weeks=1) - time_margin
+            else:
+                required_time = timedelta(0)
+            
+            if should_run:
+                self.logger.info(f"Temps d'exécution - Fréquence: {frequency} (écoulé: {time_elapsed})")
+            else:
+                remaining_time = required_time - time_elapsed
+                self.logger.info(f"Pas encore le temps - Fréquence: {frequency} (manque: {remaining_time})")
+            
+            return should_run
             
         except Exception as e:
             self.logger.error(f"Erreur vérification fréquence: {e}")
@@ -139,8 +144,9 @@ class AutoBriefScheduler:
             current_day = now.strftime('%A').lower()
             current_time = now.strftime('%H:%M')
             
-            # Vérifier le jour (pour les fréquences weekly/monthly)
-            if user_settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
+            # Vérifier le jour (pour la fréquence weekly)
+            frequency = user_settings.get('frequency', 'weekly')
+            if frequency == 'weekly':
                 if current_day != schedule_day.lower():
                     self.logger.info(f"Jour incorrect - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
                     return False

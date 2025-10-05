@@ -44,12 +44,7 @@ class SecureAuth:
     
     def encrypt_token(self, token_data):
         """Chiffre les données du token"""
-        try:
-            # Debug: afficher la SECRET_KEY utilisée pour le chiffrement
-            secret_key = self.config.get_secret_key()
-            if hasattr(st, 'info'):
-                st.info(f"SECRET_KEY utilisée pour chiffrement: {secret_key[:10]}...")
-            
+        try:          
             json_data = json.dumps(token_data)
             encrypted_data = self.encryption.encrypt(json_data.encode())
             return base64.b64encode(encrypted_data).decode()
@@ -148,73 +143,85 @@ class SecureAuth:
         if 'authenticated' in st.session_state and st.session_state['authenticated']:
             return True
             
-        st.markdown("### Authentification Google")
         st.info("Pour utiliser AutoBrief, vous devez vous connecter avec votre compte Google.")
         
         # Vérifier si credentials.json existe
         if not self.get_credentials_file():
             return False
             
-        # Bouton de connexion
-        if st.button("Se connecter avec Google", type="primary"):
-            try:
-                # Obtenir le fichier credentials (secrets Streamlit en priorité)
-                credentials_file = self.get_credentials_file()
-                if not credentials_file:
-                    return False
-                
-                # Utiliser le flux OAuth natif (plus fiable)
-                flow = Flow.from_client_secrets_file(
-                    credentials_file,
-                    scopes=self.config.SCOPES,
-                    redirect_uri="urn:ietf:wg:oauth:2.0:oob"  # Flux natif
-                )
-                
-                # Obtenir l'URL d'autorisation
-                auth_url, _ = flow.authorization_url(prompt='consent')
-                
-                st.markdown(f"""
-                **Étapes de connexion :**
-                
-                1. Cliquez sur le lien ci-dessous
-                2. Connectez-vous avec votre compte Google
-                3. Copiez le code d'autorisation affiché
-                4. Collez-le dans le champ ci-dessous
-                
-                [Se connecter avec Google]({auth_url})
-                """)
-                
-                # Champ pour le code d'autorisation
-                auth_code = st.text_input("Code d'autorisation:", type="password", 
-                                        help="Collez ici le code que vous avez reçu après la connexion")
-                
-                if auth_code:
-                    try:
-                        # Échanger le code contre les tokens
-                        flow.fetch_token(code=auth_code)
-                        credentials = flow.credentials
+        # Initialiser le flow OAuth une seule fois
+        try:
+            # Obtenir le fichier credentials (secrets Streamlit en priorité)
+            credentials_file = self.get_credentials_file()
+            if not credentials_file:
+                return False
+            
+            # Utiliser le flux OAuth natif (plus fiable)
+            flow = Flow.from_client_secrets_file(
+                credentials_file,
+                scopes=self.config.SCOPES,
+                redirect_uri="urn:ietf:wg:oauth:2.0:oob"  # Flux natif
+            )
+            
+            # Obtenir l'URL d'autorisation
+            auth_url, _ = flow.authorization_url(prompt='consent')
+            
+            st.markdown(f"""
+            **Étapes de connexion :**
+            
+            1. Cliquez sur le lien ci-dessous
+            2. Connectez-vous avec votre compte Google
+            3. Copiez le code d'autorisation affiché
+            4. Collez-le dans le champ ci-dessous
+            
+            [Se connecter avec Google]({auth_url})
+            """)
+            
+            # Champ pour le code d'autorisation
+            auth_code = st.text_input("Code d'autorisation:", type="password", 
+                                        help="Collez ici le code que vous avez reçu après la connexion",
+                                        key="auth_code_input")
+            
+            # Deux boutons qui font la même chose
+            connect_button = st.button("Se connecter avec Google", type="primary", key="connect_google")
+                       
+            # Traitement du code d'autorisation (même logique pour les deux boutons)
+            if auth_code and (connect_button):
+                try:
+                    # Échanger le code contre les tokens
+                    flow.fetch_token(code=auth_code)
+                    credentials = flow.credentials
+                    
+                    # Sauvegarder le token chiffré
+                    if self.save_encrypted_token(credentials):
+                        st.session_state['authenticated'] = True
+                        st.session_state['user_email'] = self.get_user_email(credentials)
                         
-                        # Sauvegarder le token chiffré
-                        if self.save_encrypted_token(credentials):
-                            st.session_state['authenticated'] = True
-                            st.session_state['user_email'] = self.get_user_email(credentials)
-                            st.success("Connexion réussie !")
-                            st.rerun()
-                        else:
-                            st.error("Erreur lors de la sauvegarde des credentials")
-                            
-                    except Exception as e:
-                        st.error(f"Erreur d'authentification: {e}")
-                        st.write(f"Détails de l'erreur: {str(e)}")
+                        # Affichage de succès avec délai
+                        st.success("Connexion réussie !")
                         
-                        # Proposer de réessayer
-                        if st.button("Réessayer la connexion"):
-                            st.session_state.pop('authenticated', None)
-                            st.rerun()
+                        # Délai de chargement avec spinner
+                        with st.spinner("Redirection vers l'accueil..."):
+                            import time
+                            time.sleep(2)  # Délai de 2 secondes
                         
-            except Exception as e:
-                st.error(f"Erreur de configuration: {e}")
-                st.info("Vérifiez que le fichier credentials.json est présent et correct.")
+                        # Redirection automatique
+                        st.rerun()
+                    else:
+                        st.error("Erreur lors de la sauvegarde des credentials")
+                        
+                except Exception as e:
+                    st.error(f"Erreur d'authentification: {e}")
+                    st.write(f"Détails de l'erreur: {str(e)}")
+                    
+                    # Proposer de réessayer
+                    if st.button("Réessayer la connexion"):
+                        st.session_state.pop('authenticated', None)
+                        st.rerun()
+            
+        except Exception as e:
+            st.error(f"Erreur de configuration: {e}")
+            st.info("Vérifiez que le fichier credentials.json est présent et correct.")
                 
         return False
     
