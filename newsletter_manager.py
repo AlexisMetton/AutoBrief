@@ -960,7 +960,7 @@ class NewsletterManager:
         # Traiter chaque message
         output = ""
         if hasattr(st, 'progress'):
-        progress_bar = st.progress(0)
+            progress_bar = st.progress(0)
         else:
             progress_bar = None
         
@@ -980,7 +980,7 @@ class NewsletterManager:
                         output += summary
             
             if progress_bar:
-            progress_bar.progress((idx + 1) / len(messages))
+                progress_bar.progress((idx + 1) / len(messages))
         
         # Mettre à jour la date de dernière exécution
         if output:
