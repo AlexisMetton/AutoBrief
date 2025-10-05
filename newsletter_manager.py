@@ -928,8 +928,8 @@ class NewsletterManager:
         if output:
             self.update_last_run()
         
-        # Envoyer par email seulement si demandé (génération automatique)
-        if send_email:
+        # Envoyer par email seulement si demandé ET s'il y a du contenu
+        if send_email and output and output.strip():
             settings = self.get_user_settings()
             notification_email = settings.get('notification_email')
             if notification_email and notification_email.strip():

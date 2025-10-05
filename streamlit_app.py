@@ -235,15 +235,19 @@ def show_home_page(newsletter_manager):
                     user_data = newsletter_manager.load_user_data()
                     days_to_analyze = user_data.get('settings', {}).get('days_to_analyze', 7)
                     
+                    # Debug pour vérifier la valeur
+                    st.write(f"🔍 Debug: days_to_analyze = {days_to_analyze}")
+                    st.write(f"🔍 Debug: user_data settings = {user_data.get('settings', {})}")
+                    
                     # Générer le résumé avec la configuration utilisateur
                     result = newsletter_manager.process_newsletters(days=days_to_analyze, send_email=True)
-                    if result:
+                    if result and result.strip():
                         st.session_state['last_summary'] = result
                         st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
                         st.success("Test de newsletter réussi ! Résumé généré et email envoyé.")
                         st.rerun()
                     else:
-                        st.error("Aucun contenu trouvé pour la période sélectionnée")
+                        st.warning("Aucun contenu IA trouvé dans les newsletters pour la période sélectionnée. L'email n'a pas été envoyé.")
     
     with col2:
         if st.button("Tester l'envoi", type="secondary", use_container_width=True, icon=":material/send:"):
