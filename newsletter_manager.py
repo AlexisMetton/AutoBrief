@@ -680,7 +680,6 @@ class NewsletterManager:
         
         # Note sur la tolérance et conversion
         st.caption("Tolérance de ±30 minutes pour compenser les délais d'automatisation GitHub Actions")
-        st.caption("Conversion automatique : heure française → UTC (GitHub Actions)")
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
@@ -859,41 +858,63 @@ class NewsletterManager:
     
     def process_newsletters_scheduler(self, days=7, send_email=False):
         """Version simplifiée pour le scheduler (sans Streamlit)"""
+        print(f"🔍 DEBUG: process_newsletters_scheduler démarré - days={days}, send_email={send_email}")
+        
         newsletters = self.get_newsletters()
         if not newsletters:
+            print("❌ DEBUG: Aucune newsletter configurée")
             return None
+        print(f"✅ DEBUG: {len(newsletters)} newsletters trouvées: {newsletters}")
         
         service = self.auth.get_gmail_service()
         if not service:
+            print("❌ DEBUG: Impossible d'obtenir le service Gmail")
             return None
+        print("✅ DEBUG: Service Gmail obtenu")
         
         # Récupérer le prompt personnalisé
         settings = self.get_user_settings()
         custom_prompt = settings.get('custom_prompt', '')
+        print(f"🔍 DEBUG: Custom prompt: '{custom_prompt[:50]}...'")
         
         # Créer la requête
         query = self.get_query_for_emails(newsletters, days)
+        print(f"🔍 DEBUG: Requête Gmail: {query}")
         
         # Récupérer les messages
         try:
             results = service.users().messages().list(userId='me', q=query).execute()
             messages = results.get('messages', [])
+            print(f"🔍 DEBUG: {len(messages)} messages trouvés")
             
             if not messages:
+                print("❌ DEBUG: Aucun message trouvé")
                 return None
             
             # Traiter chaque message
             output = ""
             for idx, msg in enumerate(messages):
+                print(f"🔍 DEBUG: Traitement message {idx + 1}/{len(messages)}")
                 message = self.get_message(service, msg['id'])
                 
                 if message:
                     body = self.get_message_body(message)
                     if body:
+                        print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
                         summary = self.summarize_newsletter(body, custom_prompt)
+                        print(f"🔍 DEBUG: Résumé IA généré: {len(summary) if summary else 0} caractères")
                         if summary and len(summary.strip()) > 0:
                             summary = self.replace_redirected_links(summary)
                             output += summary
+                            print(f"✅ DEBUG: Résumé ajouté à l'output")
+                        else:
+                            print("❌ DEBUG: Résumé vide ou invalide")
+                    else:
+                        print("❌ DEBUG: Impossible d'extraire le corps du message")
+                else:
+                    print("❌ DEBUG: Impossible de récupérer le message")
+            
+            print(f"🔍 DEBUG: Output final: {len(output)} caractères")
             
             # Envoyer par email si demandé
             if output and send_email:
