@@ -559,7 +559,7 @@ class NewsletterManager:
         """Interface de gestion des newsletters"""
         
         # Ajouter une newsletter
-        with st.expander('<i class="fa-solid fa-circle-plus"></i> Ajouter une newsletter', expanded=True):
+        with st.expander('Ajouter une newsletter', expanded=True):
             col1, col2 = st.columns([3, 1])
             with col1:
                 new_email = st.text_input(

@@ -351,7 +351,7 @@ def show_help_page():
     """Page d'aide"""
     
     st.markdown("""
-    ### <i class='fa-solid fa-circle-question'></i> Comment utiliser AutoBrief
+    ### Comment utiliser AutoBrief
     
     **1. Configuration initiale:**
     - Assurez-vous d'avoir un fichier `.env` avec vos clés API
