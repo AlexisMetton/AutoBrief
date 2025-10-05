@@ -289,9 +289,9 @@ class AutoBriefScheduler:
                     self.logger.error(f"❌ Erreur configuration Gmail auth: {e}")
                     return False
                 
-                # Générer le résumé avec l'IA et envoyer l'email
+                # Générer le résumé avec l'IA et envoyer l'email (avec filtrage des promotions)
                 days_to_analyze = user_info.get('settings', {}).get('days_to_analyze', 7)
-                summary_result = newsletter_manager.process_newsletters_scheduler(days=days_to_analyze, send_email=True)
+                summary_result = newsletter_manager.process_newsletters(days=days_to_analyze, send_email=True)
                 
                 # Vérifier le résultat
                 if summary_result is True or (isinstance(summary_result, str) and summary_result.strip()):
