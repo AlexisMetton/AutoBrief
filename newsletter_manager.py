@@ -756,7 +756,7 @@ class NewsletterManager:
             content = content[:32000]
         
         # Prompt de base
-        base_prompt = """From the following newsletter, extract all the news related to AI while keeping the 
+        base_prompt = """From the following newsletter, extract all the news while keeping the 
             links to sources of information. Do not keep any affiliate links, self-promotion links, substack links and links to other articles by 
             the same author. Do not keep reference to the author, the newsletter or substack:"""
         
