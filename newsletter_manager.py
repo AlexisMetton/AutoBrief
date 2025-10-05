@@ -1073,6 +1073,8 @@ class NewsletterManager:
                 progress_bar.progress((idx + 1) / len(messages))
         
         print(f"🔍 DEBUG: {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
+        if hasattr(st, 'info'):
+            st.info(f"📊 {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
         
         # Traiter seulement les emails non-promotionnels
         all_content = ""
@@ -1095,15 +1097,30 @@ class NewsletterManager:
                 print("❌ DEBUG: Impossible de récupérer le message")
         
         print(f"🔍 DEBUG: Contenu éditorial global: {len(all_content)} caractères")
+        if hasattr(st, 'info'):
+            st.info(f"📄 Contenu éditorial global: {len(all_content)} caractères")
         
         # Générer un seul résumé pour tous les emails non-promotionnels
         if all_content.strip():
             print(f"🔍 DEBUG: Génération du résumé global...")
+            print(f"🔍 DEBUG: Contenu à traiter: {len(all_content)} caractères")
+            if hasattr(st, 'info'):
+                st.info(f"🤖 Génération du résumé IA...")
             output = self.summarize_newsletter(all_content, custom_prompt)
             print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
+            if output:
+                print(f"🔍 DEBUG: Résumé non vide - traitement réussi")
+                if hasattr(st, 'success'):
+                    st.success(f"✅ Résumé IA généré: {len(output)} caractères")
+            else:
+                print(f"❌ DEBUG: Résumé vide - problème avec l'IA")
+                if hasattr(st, 'error'):
+                    st.error("❌ L'IA n'a pas généré de contenu")
         else:
             output = ""
             print("❌ DEBUG: Aucun contenu éditorial à traiter")
+            if hasattr(st, 'warning'):
+                st.warning("⚠️ Aucun contenu éditorial trouvé")
         
         # Mettre à jour la date de dernière exécution
         if output:
@@ -1116,6 +1133,7 @@ class NewsletterManager:
             if notification_email and notification_email.strip():
                 self.send_summary_email(output, notification_email)
         
+        print(f"🔍 DEBUG: Valeur finale retournée: '{output}' (type: {type(output)}, longueur: {len(output) if output else 0})")
         return output
     
     def update_last_run(self):
