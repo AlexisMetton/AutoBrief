@@ -884,8 +884,22 @@ class NewsletterManager:
             )
             
             print(f"🔍 DEBUG: Réponse OpenAI reçue")
-            data = json.loads(response.choices[0].message.content)
-            print(f"🔍 DEBUG: JSON parsé: {list(data.keys())}")
+            
+            # Vérifier que la réponse n'est pas vide
+            response_content = response.choices[0].message.content
+            if not response_content or response_content.strip() == "":
+                print(f"❌ DEBUG: Réponse OpenAI vide")
+                return ""
+            
+            print(f"🔍 DEBUG: Contenu réponse: '{response_content[:100]}...'")
+            
+            try:
+                data = json.loads(response_content)
+                print(f"🔍 DEBUG: JSON parsé: {list(data.keys())}")
+            except json.JSONDecodeError as json_error:
+                print(f"❌ DEBUG: Erreur parsing JSON: {json_error}")
+                print(f"❌ DEBUG: Contenu reçu: '{response_content}'")
+                return ""
             
             if 'result' in data and isinstance(data['result'], str):
                 result = data['result']
