@@ -836,24 +836,33 @@ class NewsletterManager:
         ]
         
         try:
+            print(f"🔍 DEBUG: Appel OpenAI avec {len(full_prompt)} caractères de prompt")
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 response_format={"type": "json_object"},
                 messages=messages,
             )
             
+            print(f"🔍 DEBUG: Réponse OpenAI reçue")
             data = json.loads(response.choices[0].message.content)
+            print(f"🔍 DEBUG: JSON parsé: {list(data.keys())}")
             
             if 'result' in data and isinstance(data['result'], str):
                 result = data['result']
+                print(f"🔍 DEBUG: Résultat IA: {len(result)} caractères")
+                print(f"🔍 DEBUG: Premiers 200 caractères: {result[:200]}...")
+                
                 # Debug pour voir ce que l'IA génère
                 if hasattr(st, 'write'):
                     st.write(f"🔍 Debug: HTML généré par l'IA (premiers 500 caractères): {result[:500]}...")
                 return result
             else:
+                print(f"❌ DEBUG: Pas de 'result' valide dans la réponse: {data}")
                 return ""
         except Exception as e:
-            st.error(f"Erreur OpenAI: {e}")
+            print(f"❌ DEBUG: Erreur OpenAI: {e}")
+            if hasattr(st, 'error'):
+                st.error(f"Erreur OpenAI: {e}")
             return ""
     
     def process_newsletters_scheduler(self, days=7, send_email=False):
