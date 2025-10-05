@@ -707,18 +707,88 @@ class NewsletterManager:
             return None
     
     def get_message_body(self, message):
-        """Extrait le contenu textuel d'un message"""
+        """Extrait le contenu textuel d'un message et le nettoie"""
         try:
             parts = message['payload'].get('parts', [])
             if parts:
                 for part in parts:
                     if part['mimeType'] == 'text/plain':
-                        return base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                        content = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                        return self.clean_email_content(content)
             else:
-                return base64.urlsafe_b64decode(message['payload']['body']['data']).decode('utf-8')
+                content = base64.urlsafe_b64decode(message['payload']['body']['data']).decode('utf-8')
+                return self.clean_email_content(content)
         except Exception as e:
             st.error(f"Erreur lors de l'extraction du contenu: {e}")
             return None
+    
+    def clean_email_content(self, content):
+        """Nettoie le contenu email pour minimiser les tokens"""
+        if not content:
+            return ""
+        
+        import re
+        from bs4 import BeautifulSoup
+        
+        # 1. Supprimer le HTML (garder seulement le texte)
+        try:
+            soup = BeautifulSoup(content, 'html.parser')
+            # Supprimer les scripts, styles, et métadonnées
+            for script in soup(["script", "style", "meta", "head"]):
+                script.decompose()
+            content = soup.get_text()
+        except:
+            # Si BeautifulSoup échoue, utiliser regex simple
+            content = re.sub(r'<[^>]+>', '', content)
+        
+        # 2. Supprimer les headers d'email
+        lines = content.split('\n')
+        cleaned_lines = []
+        in_body = False
+        
+        for line in lines:
+            # Détecter le début du corps (après les headers)
+            if not in_body and (line.strip() == '' or 
+                              not line.startswith(('From:', 'To:', 'Subject:', 'Date:', 'Message-ID:', 'X-', 'Return-Path:', 'Received:'))):
+                in_body = True
+            
+            if in_body:
+                cleaned_lines.append(line)
+        
+        content = '\n'.join(cleaned_lines)
+        
+        # 3. Supprimer les signatures communes
+        signature_patterns = [
+            r'(?i)sent from my .*',
+            r'(?i)envoyé depuis mon .*',
+            r'(?i)get outlook for .*',
+            r'(?i)disponible sur .*',
+            r'(?i)powered by .*',
+            r'(?i)confidentialité.*',
+            r'(?i)privacy.*',
+            r'(?i)unsubscribe.*',
+            r'(?i)désabonnement.*',
+            r'(?i)vous recevez cet email.*',
+            r'(?i)this email was sent.*',
+        ]
+        
+        for pattern in signature_patterns:
+            content = re.sub(pattern, '', content, flags=re.MULTILINE | re.DOTALL)
+        
+        # 4. Nettoyer les espaces et lignes vides
+        content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)  # Max 2 sauts de ligne
+        content = re.sub(r'[ \t]+', ' ', content)  # Normaliser les espaces
+        content = content.strip()
+        
+        # 5. Supprimer les URLs longues (garder seulement le texte des liens)
+        content = re.sub(r'https?://[^\s]+', '[LIEN]', content)
+        
+        # 6. Supprimer les caractères de contrôle et spéciaux
+        content = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', content)
+        
+        print(f"🧹 DEBUG: Contenu nettoyé - Avant: {len(content)} caractères")
+        
+        return content
     
     def resolve_url(self, url):
         """Résout les URLs de redirection"""
@@ -769,13 +839,37 @@ class NewsletterManager:
     def is_promotional_basic(self, subject, content):
         """Détection basique par mots-clés (fallback si l'IA échoue)"""
         promotional_keywords = [
-            'offre', 'réduction', 'promo', 'code', 'rabais', 'discount',
-            'vente', 'achat', 'commander', 'boutique', 'shop', 'store',
-            'spécial', 'limité', 'urgent', 'profitez', 'économisez',
-            'gratuit', 'free', 'deal', 'bargain', 'sale', 'clearance'
+            # Mots-clés de réduction/offre
+            'offre', 'réduction', 'promo', 'code', 'rabais', 'discount', 'remise',
+            'moitié prix', 'prix cassé', 'prix barré', 'économie', 'économisez',
+            'profitez', 'spécial', 'limité', 'urgent', 'flash', 'éclair',
+            
+            # Mots-clés d'achat/vente
+            'vente', 'achat', 'commander', 'boutique', 'shop', 'store', 'magasin',
+            'commande', 'panier', 'ajouter au panier', 'livraison', 'expédition',
+            'paiement', 'carte bancaire', 'cb', 'paypal', 'stripe',
+            
+            # Mots-clés promotionnels
+            'gratuit', 'free', 'deal', 'bargain', 'sale', 'clearance', 'liquidation',
+            'soldes', 'promotion', 'cadeau', 'gift', 'bonus', 'prime',
+            'exclusif', 'exclusive', 'réservé', 'private', 'vip',
+            
+            # Mots-clés d'urgence/pression
+            'dépêchez-vous', 'hâtez-vous', 'fin', 'dernière', 'dernières heures',
+            'bientôt fini', 'stock limité', 'quantité limitée', 'plus que',
+            'ne manquez pas', 'occasion unique', 'une seule fois',
+            
+            # Mots-clés d'abonnement
+            'abonnement', 'subscription', 's\'abonner', 'subscribe', 'newsletter',
+            'inscription', 'inscrivez-vous', 'rejoignez', 'join', 'adhésion',
+            
+            # Mots-clés commerciaux
+            'client', 'customer', 'satisfaction', 'garantie', 'warranty',
+            'service client', 'support', 'aide', 'help', 'contact',
+            'devis', 'quote', 'estimation', 'tarif', 'prix'
         ]
         
-        text_to_analyze = f"{subject} {content}".lower()
+        text_to_analyze = f"{subject}".lower()
         
         for keyword in promotional_keywords:
             if keyword in text_to_analyze:
