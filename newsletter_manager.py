@@ -994,23 +994,37 @@ class NewsletterManager:
         else:
             progress_bar = None
         
+        print(f"🔍 DEBUG: Traitement de {len(messages)} messages")
+        
         for idx, msg in enumerate(messages):
+            print(f"🔍 DEBUG: Traitement message {idx + 1}/{len(messages)}")
             if hasattr(st, 'spinner'):
                 with st.spinner(f"Traitement de l'email {idx + 1}/{len(messages)}..."):
                     message = self.get_message(service, msg['id'])
             else:
                 message = self.get_message(service, msg['id'])
             
-                if message:
-                    body = self.get_message_body(message)
-                    if body:
-                        summary = self.summarize_newsletter(body, custom_prompt)
-                        if summary and len(summary.strip()) > 0:
-                            summary = self.replace_redirected_links(summary)
+            if message:
+                body = self.get_message_body(message)
+                if body:
+                    print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
+                    summary = self.summarize_newsletter(body, custom_prompt)
+                    print(f"🔍 DEBUG: Résumé IA généré: {len(summary) if summary else 0} caractères")
+                    if summary and len(summary.strip()) > 0:
+                        summary = self.replace_redirected_links(summary)
                         output += summary
+                        print(f"✅ DEBUG: Résumé ajouté à l'output")
+                    else:
+                        print("❌ DEBUG: Résumé vide ou invalide")
+                else:
+                    print("❌ DEBUG: Impossible d'extraire le corps du message")
+            else:
+                print("❌ DEBUG: Impossible de récupérer le message")
             
             if progress_bar:
                 progress_bar.progress((idx + 1) / len(messages))
+        
+        print(f"🔍 DEBUG: Output final: {len(output)} caractères")
         
         # Mettre à jour la date de dernière exécution
         if output:
