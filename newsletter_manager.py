@@ -613,7 +613,7 @@ class NewsletterManager:
             with col2:
                 st.write("")  # Espacement
                 st.write("")  # Espacement
-                if st.button("Créer la newsletter", type="primary", icon=":material/add:"):
+                if st.button("Créer la newsletter", type="primary", icon=":material/add:", key="create_newsletter_btn"):
                     if new_newsletter_title:
                         if self.create_newsletter(new_newsletter_title):
                             st.success(f"Newsletter '{new_newsletter_title}' créée")
@@ -656,7 +656,7 @@ class NewsletterManager:
                             height=100
                         )
                         
-                        if st.button("Ajouter les emails", type="primary", icon=":material/add:"):
+                        if st.button("Ajouter les emails", type="primary", icon=":material/add:", key=f"add_emails_{selected_newsletter}"):
                             if emails_text:
                                 # Parser les emails
                                 new_emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
@@ -687,7 +687,7 @@ class NewsletterManager:
                         st.info("Aucun email dans cette newsletter")
                     
                     # Bouton pour supprimer la newsletter entière
-                    if st.button("Supprimer cette newsletter", type="secondary", icon=":material/delete:"):
+                    if st.button("Supprimer cette newsletter", type="secondary", icon=":material/delete:", key=f"delete_newsletter_{selected_newsletter}"):
                         self.remove_newsletter(selected_newsletter)
                         st.rerun()
         else:
