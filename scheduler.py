@@ -81,25 +81,51 @@ class AutoBriefScheduler:
     def should_group_run_automatically(self, group_settings):
         """Vérifie si un groupe doit être traité automatiquement"""
         if not group_settings.get('enabled', True):
+            self.logger.info("Groupe désactivé")
             return False
         
         last_run = group_settings.get('last_run')
+        frequency = group_settings.get('frequency', 'daily')
+        
+        # Vérifier si c'est le bon jour et la bonne heure
+        if not self.is_group_scheduled_time(group_settings):
+            return False
+        
+        # Si pas de dernière exécution, on peut traiter
         if not last_run:
+            self.logger.info("Première exécution du groupe")
             return True
         
         try:
             last_run_date = datetime.fromisoformat(last_run)
-            frequency = group_settings.get('frequency', 'weekly')
-            
-            # Vérifier si c'est le bon jour et la bonne heure
-            if not self.is_group_scheduled_time(group_settings):
-                return False
+            now = datetime.now()
             
             if frequency == 'daily':
-                return datetime.now() - last_run_date >= timedelta(days=1)
+                # Pour les groupes quotidiens, vérifier qu'au moins 20h se sont écoulées
+                # (pour éviter les exécutions multiples le même jour)
+                time_since_last = now - last_run_date
+                should_run = time_since_last >= timedelta(hours=20)
+                
+                if should_run:
+                    self.logger.info(f"Groupe quotidien prêt - Dernière exécution: {last_run_date.strftime('%d/%m/%Y %H:%M')}, Écoulé: {time_since_last}")
+                else:
+                    self.logger.info(f"Groupe quotidien pas encore prêt - Dernière exécution: {last_run_date.strftime('%d/%m/%Y %H:%M')}, Écoulé: {time_since_last}")
+                
+                return should_run
+                
             elif frequency == 'weekly':
-                return datetime.now() - last_run_date >= timedelta(weeks=1)
-        except:
+                # Pour les groupes hebdomadaires, vérifier qu'au moins 6 jours se sont écoulés
+                time_since_last = now - last_run_date
+                should_run = time_since_last >= timedelta(days=6)
+                
+                if should_run:
+                    self.logger.info(f"Groupe hebdomadaire prêt - Dernière exécution: {last_run_date.strftime('%d/%m/%Y %H:%M')}, Écoulé: {time_since_last}")
+                else:
+                    self.logger.info(f"Groupe hebdomadaire pas encore prêt - Dernière exécution: {last_run_date.strftime('%d/%m/%Y %H:%M')}, Écoulé: {time_since_last}")
+                
+                return should_run
+        except Exception as e:
+            self.logger.error(f"Erreur vérification fréquence: {e}")
             return True
         
         return False
@@ -109,26 +135,38 @@ class AutoBriefScheduler:
         try:
             schedule_day = group_settings.get('schedule_day', 'monday')
             schedule_time = group_settings.get('schedule_time', '09:00')
+            frequency = group_settings.get('frequency', 'daily')
             
             now = datetime.now()
             current_day = now.strftime('%A').lower()
-            current_time = now.strftime('%H:%M')
             
-            # Vérifier le jour (pour la fréquence weekly)
-            if group_settings.get('frequency', 'weekly') == 'weekly':
+            # Pour les groupes quotidiens, on ignore le jour et on vérifie seulement l'heure
+            # Pour les groupes hebdomadaires, on vérifie le jour ET l'heure
+            if frequency == 'weekly':
                 if current_day != schedule_day.lower():
+                    self.logger.info(f"Jour incorrect pour groupe hebdomadaire - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
                     return False
             
-            # Vérifier l'heure (avec une marge de 30 minutes)
+            # Pour GitHub Actions, on accepte une marge de 30 minutes
             target_hour = int(schedule_time.split(':')[0])
             target_minute = int(schedule_time.split(':')[1])
             current_hour = now.hour
             current_minute = now.minute
             
             time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
-            return time_diff <= 30
+            
+            # Marge de 30 minutes pour GitHub Actions
+            is_scheduled = time_diff <= 30
+            
+            if is_scheduled:
+                self.logger.info(f"✅ Groupe programmé - Heure actuelle: {current_hour}:{current_minute:02d}, Heure cible: {target_hour}:{target_minute:02d}, Différence: {time_diff}min")
+            else:
+                self.logger.info(f"⏰ Pas encore l'heure - Heure actuelle: {current_hour}:{current_minute:02d}, Heure cible: {target_hour}:{target_minute:02d}, Différence: {time_diff}min")
+            
+            return is_scheduled
             
         except Exception as e:
+            self.logger.error(f"Erreur vérification horaire: {e}")
             return True  # En cas d'erreur, on autorise l'exécution
     
     def is_scheduled_time(self, user_settings):
