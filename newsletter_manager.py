@@ -683,7 +683,7 @@ class NewsletterManager:
                                 if st.button("Supprimer", key=f"delete_email_{i}_{selected_newsletter}", icon=":material/delete:"):
                                     self.remove_email_from_newsletter(selected_newsletter, email)
                         st.rerun()
-                    else:
+                    else: 
                         st.info("Aucun email dans cette newsletter")
                     
                     # Bouton pour supprimer la newsletter entière
