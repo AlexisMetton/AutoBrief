@@ -1114,11 +1114,8 @@ class NewsletterManager:
             print("❌ DEBUG: Aucune newsletter configurée")
             return None
         
-        # Extraire tous les emails de toutes les newsletters
-        all_emails = []
-        for newsletter in newsletters:
-            emails = newsletter.get('emails', [])
-            all_emails.extend(emails)
+        # Les newsletters sont maintenant directement une liste d'emails
+        all_emails = newsletters
         
         print(f"✅ DEBUG: {len(newsletters)} newsletters trouvées avec {len(all_emails)} emails au total: {all_emails}")
         
@@ -1222,11 +1219,8 @@ class NewsletterManager:
                 print("❌ Aucune newsletter configurée")
             return None
         
-        # Extraire tous les emails de toutes les newsletters
-        all_emails = []
-        for newsletter in newsletters:
-            emails = newsletter.get('emails', [])
-            all_emails.extend(emails)
+        # Les newsletters sont maintenant directement une liste d'emails
+        all_emails = newsletters
         
         service = self.auth.get_gmail_service()
         if not service:
