@@ -259,6 +259,9 @@ class NewsletterManager:
             if self._scheduler_mode:
                 return True
             
+            # Nettoyer les données en supprimant les anciens paramètres
+            cleaned_data = self._clean_data_structure(data)
+            
             # Sauvegarder les credentials OAuth2 si disponibles (uniquement dans Streamlit)
             if hasattr(st, 'session_state') and 'encrypted_token' in st.session_state and st.session_state['encrypted_token']:
                 try:
@@ -269,7 +272,7 @@ class NewsletterManager:
                         # Chiffrer les données sensibles avant de les sauvegarder dans le Gist
                         encrypted_credentials = self.auth.encrypt_token(decrypted_token)
                         
-                        data['oauth_credentials'] = {
+                        cleaned_data['oauth_credentials'] = {
                             "_encrypted_data": encrypted_credentials,  # Données chiffrées
                             "_encrypted": True,  # Indicateur que les données sont chiffrées
                             "token_uri": decrypted_token.get('token_uri', 'https://oauth2.googleapis.com/token'),
@@ -283,13 +286,29 @@ class NewsletterManager:
                         st.warning(f"Impossible de sauvegarder les credentials OAuth2: {e}")
             
             # Sauvegarder directement dans le Gist
-            success = self.save_to_github_gist(data)
+            success = self.save_to_github_gist(cleaned_data)
             
             return success
         except Exception as e:
             if hasattr(st, 'error'):
                 st.error(f"Erreur lors de la sauvegarde: {e}")
             return False
+    
+    def _clean_data_structure(self, data):
+        """Nettoie la structure de données en supprimant les anciens paramètres"""
+        cleaned_data = {}
+        
+        # Garder seulement les paramètres nécessaires
+        if 'newsletter_groups' in data:
+            cleaned_data['newsletter_groups'] = data['newsletter_groups']
+        
+        if 'oauth_credentials' in data:
+            cleaned_data['oauth_credentials'] = data['oauth_credentials']
+        
+        # Supprimer les anciens paramètres
+        # (newsletters, settings, etc. ne sont plus nécessaires)
+        
+        return cleaned_data
     
     
     def save_to_github_gist(self, data):
@@ -575,7 +594,7 @@ class NewsletterManager:
         st.markdown("### <i class='fas fa-home'></i> Gestion des newsletters", unsafe_allow_html=True)
         
         # Ajouter un groupe de newsletters
-        with st.expander('<i class="fas fa-plus"></i> Ajouter un nouveau groupe de newsletters', expanded=True):
+        with st.expander('Ajouter un nouveau groupe de newsletters', expanded=True):
             st.markdown("**Créez un nouveau groupe avec ses paramètres personnalisés**")
             
             col1, col2 = st.columns(2)
@@ -812,9 +831,9 @@ class NewsletterManager:
                             'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
                             'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
                         }[schedule_day]
-                        st.info(f'<i class="far fa-calendar"></i> Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)')
+                        st.info(f'Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)')
                     else:
-                        st.info(f'<i class="far fa-calendar"></i> Planification : {frequency_text} à {schedule_time} heure française (±30min)')
+                        st.info(f'Planification : {frequency_text} à {schedule_time} heure française (±30min)')
                     
                     # Dernière exécution
                     last_run = group_settings.get('last_run')

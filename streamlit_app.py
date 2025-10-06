@@ -92,11 +92,7 @@ def main():
     # Vérifier si un résumé automatique doit être généré (APRÈS authentification)
     if newsletter_manager.should_run_automatically():
         with st.spinner("Génération automatique en cours..."):
-            # Récupérer la configuration utilisateur pour les jours à analyser
-            user_data = newsletter_manager.load_user_data()
-            days_to_analyze = user_data.get('settings', {}).get('days_to_analyze', 7)
-            
-            result = newsletter_manager.process_newsletters(days=days_to_analyze)
+            result = newsletter_manager.process_newsletters()
             if result:
                 st.session_state['last_summary'] = result
                 st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
