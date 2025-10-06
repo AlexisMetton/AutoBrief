@@ -355,14 +355,21 @@ class AutoBriefScheduler:
             # Traiter ce groupe spécifique
             result = newsletter_manager.process_single_group(group_title, group_settings)
             
-            if result:
-                # Mettre à jour la date de dernière exécution pour ce groupe
+            # Vérifier si un résumé a vraiment été généré et envoyé
+            if result and isinstance(result, str) and result.strip():
+                # Mettre à jour la date de dernière exécution seulement si un email a été envoyé
                 self.update_group_last_run(user_info['email'], group_title)
-                self.logger.info(f"📄 Résumé généré pour le groupe '{group_title}'")
+                self.logger.info(f"📄 Résumé généré et email envoyé pour le groupe '{group_title}'")
+                return True
+            elif result is True:
+                # Résumé généré mais pas de contenu (cas normal)
+                self.logger.info(f"📄 Résumé généré pour le groupe '{group_title}' (pas de nouveau contenu)")
+                # Ne pas mettre à jour last_run car pas de nouveau contenu
                 return True
             else:
                 self.logger.warning(f"ℹ️ Aucun contenu trouvé pour le groupe '{group_title}'")
-                return True  # Pas d'erreur, juste rien à traiter
+                # Ne pas mettre à jour last_run car pas de contenu
+                return True
                 
         except Exception as e:
             self.logger.error(f"❌ Erreur traitement groupe '{group_title}': {e}")
