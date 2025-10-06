@@ -35,7 +35,7 @@ class AutoBriefScheduler:
         self.logger = logging.getLogger(__name__)
         
     def get_all_users(self):
-        """Récupère tous les utilisateurs depuis GitHub Gist"""
+        """Récupère tous les utilisateurs depuis GitHub Gist avec leurs groupes"""
         users = []
         
         try:
@@ -61,14 +61,14 @@ class AutoBriefScheduler:
                     all_users_data = json.loads(content)
                     
                     for user_email, user_data in all_users_data.items():
-                        settings = user_data.get('settings', {})
+                        newsletter_groups = user_data.get('newsletter_groups', [])
                         
-                        # Vérifier si l'utilisateur a activé l'envoi automatique
-                        if settings.get('auto_send', False):
+                        # Vérifier si l'utilisateur a des groupes actifs
+                        if newsletter_groups:
                             users.append({
                                 'email': user_email,
-                                'settings': settings,
-                                'newsletters': user_data.get('newsletters', [])
+                                'newsletter_groups': newsletter_groups,
+                                'oauth_credentials': user_data.get('oauth_credentials', {})
                             })
             else:
                 self.logger.error(f"Erreur lors de la récupération du Gist: {response.status_code}")
@@ -78,61 +78,58 @@ class AutoBriefScheduler:
         
         return users
     
-    def should_run_for_user(self, user_settings):
-        """Vérifie si un résumé doit être généré pour cet utilisateur"""
-        if not user_settings.get('auto_send', False):
-            self.logger.info("Auto-send désactivé")
+    def should_group_run_automatically(self, group_settings):
+        """Vérifie si un groupe doit être traité automatiquement"""
+        if not group_settings.get('enabled', True):
             return False
         
-        # Vérifier d'abord le jour et l'heure
-        if not self.is_scheduled_time(user_settings):
-            self.logger.info("Pas encore l'heure pour cet utilisateur")
-            return False
-        
-        last_run = user_settings.get('last_run')
+        last_run = group_settings.get('last_run')
         if not last_run:
-            self.logger.info("Première exécution")
             return True
         
         try:
             last_run_date = datetime.fromisoformat(last_run)
-            frequency = user_settings.get('frequency', 'weekly')
+            frequency = group_settings.get('frequency', 'weekly')
             
-            # Vérifier la fréquence selon last_run (avec une marge de 30 minutes)
-            now = datetime.now()
-            time_margin = timedelta(minutes=30)  # Marge pour GitHub Actions
+            # Vérifier si c'est le bon jour et la bonne heure
+            if not self.is_group_scheduled_time(group_settings):
+                return False
             
             if frequency == 'daily':
-                # Au moins 24h - 30min depuis la dernière exécution
-                should_run = now - last_run_date >= timedelta(days=1) - time_margin
+                return datetime.now() - last_run_date >= timedelta(days=1)
             elif frequency == 'weekly':
-                # Au moins 7 jours - 30min depuis la dernière exécution
-                should_run = now - last_run_date >= timedelta(weeks=1) - time_margin
-            else:
-                should_run = True  # Fréquence non reconnue, autoriser
-            
-            # Calculer le temps écoulé pour les logs
-            time_elapsed = now - last_run_date
-            if frequency == 'daily':
-                required_time = timedelta(days=1) - time_margin
-            elif frequency == 'weekly':
-                required_time = timedelta(weeks=1) - time_margin
-            else:
-                required_time = timedelta(0)
-            
-            if should_run:
-                self.logger.info(f"Temps d'exécution - Fréquence: {frequency} (écoulé: {time_elapsed})")
-            else:
-                remaining_time = required_time - time_elapsed
-                self.logger.info(f"Pas encore le temps - Fréquence: {frequency} (manque: {remaining_time})")
-            
-            return should_run
-            
-        except Exception as e:
-            self.logger.error(f"Erreur vérification fréquence: {e}")
+                return datetime.now() - last_run_date >= timedelta(weeks=1)
+        except:
             return True
         
         return False
+    
+    def is_group_scheduled_time(self, group_settings):
+        """Vérifie si c'est le bon moment pour traiter un groupe"""
+        try:
+            schedule_day = group_settings.get('schedule_day', 'monday')
+            schedule_time = group_settings.get('schedule_time', '09:00')
+            
+            now = datetime.now()
+            current_day = now.strftime('%A').lower()
+            current_time = now.strftime('%H:%M')
+            
+            # Vérifier le jour (pour la fréquence weekly)
+            if group_settings.get('frequency', 'weekly') == 'weekly':
+                if current_day != schedule_day.lower():
+                    return False
+            
+            # Vérifier l'heure (avec une marge de 30 minutes)
+            target_hour = int(schedule_time.split(':')[0])
+            target_minute = int(schedule_time.split(':')[1])
+            current_hour = now.hour
+            current_minute = now.minute
+            
+            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
+            return time_diff <= 30
+            
+        except Exception as e:
+            return True  # En cas d'erreur, on autorise l'exécution
     
     def is_scheduled_time(self, user_settings):
         """Vérifie si c'est le bon jour et la bonne heure pour l'exécution"""
@@ -227,90 +224,103 @@ class AutoBriefScheduler:
             self.logger.error(f"❌ Erreur envoi email: {e}")
             return False
     
-    def process_user_newsletters(self, user_info):
-        """Traite les newsletters pour un utilisateur et génère le résumé"""
+    def process_user_groups(self, user_info):
+        """Traite les groupes de newsletters pour un utilisateur"""
         try:
-            self.logger.info(f"🔄 Traitement pour {user_info['email']}")
+            self.logger.info(f"🔄 Traitement des groupes pour {user_info['email']}")
             
-            newsletters = user_info['newsletters']
-            if not newsletters:
-                self.logger.warning(f"⚠️ Aucune newsletter pour {user_info['email']}")
+            newsletter_groups = user_info.get('newsletter_groups', [])
+            if not newsletter_groups:
+                self.logger.warning(f"⚠️ Aucun groupe de newsletters pour {user_info['email']}")
                 return False
             
-            # En mode GitHub Actions, on simule le traitement
-            # Dans un vrai déploiement, on ferait appel à l'API de l'application Streamlit
-            self.logger.info(f"✅ {len(newsletters)} newsletters à traiter pour {user_info['email']}")
-            self.logger.info(f"📧 Newsletters: {', '.join(newsletters)}")
+            processed_groups = 0
             
-            # Mettre à jour la date de dernière exécution
-            self.update_last_run(user_info['email'])
-            
-            # Générer le vrai résumé avec l'IA
-            try:
-                # Simuler une session utilisateur pour NewsletterManager
-                import streamlit as st
-                st.session_state['user_email'] = user_info['email']
-                st.session_state['authenticated'] = True
+            # Traiter chaque groupe individuellement
+            for group in newsletter_groups:
+                group_title = group.get('title', 'Sans titre')
+                group_settings = group.get('settings', {})
+                group_emails = group.get('emails', [])
                 
-                self.logger.info(f"🔧 Configuration session: user_email={user_info['email']}")
+                # Vérifier si ce groupe doit être traité
+                if not self.should_group_run_automatically(group_settings):
+                    self.logger.info(f"⏳ Groupe '{group_title}' pas encore prêt")
+                    continue
                 
-                from newsletter_manager import NewsletterManager
-                newsletter_manager = NewsletterManager()
+                if not group_emails:
+                    self.logger.warning(f"⚠️ Aucun email dans le groupe '{group_title}'")
+                    continue
                 
-                # Forcer l'email utilisateur dans le NewsletterManager
-                newsletter_manager.user_email = user_info['email']
+                self.logger.info(f"📧 Traitement du groupe '{group_title}' avec {len(group_emails)} emails")
                 
-                # Passer directement les données utilisateur
-                newsletter_manager.newsletters = user_info.get('newsletters', [])
-                newsletter_manager.user_settings = user_info.get('settings', {})
-                
-                # Désactiver la sauvegarde dans le scheduler
-                newsletter_manager._scheduler_mode = True
-                
-                # Configurer l'accès Gmail pour le NewsletterManager
-                try:
-                    from secure_auth import SecureAuth
-                    auth = SecureAuth()
-                    
-                    # Récupérer les credentials de l'utilisateur depuis le Gist
-                    user_credentials = self.get_user_credentials_from_gist(user_info['email'])
-                    if user_credentials:
-                        # Convertir les credentials en JSON string pour SecureAuth
-                        import json
-                        credentials_json = json.dumps(user_credentials)
-                        auth.set_external_credentials(credentials_json)
-                    else:
-                        self.logger.error(f"❌ Aucun token OAuth2 trouvé pour {user_info['email']} dans le Gist")
-                        return False
-                    
-                    # Configurer l'auth pour le NewsletterManager
-                    newsletter_manager.auth = auth
-                except Exception as e:
-                    self.logger.error(f"❌ Erreur configuration Gmail auth: {e}")
-                    return False
-                
-                # Générer le résumé avec l'IA et envoyer l'email (avec filtrage des promotions)
-                days_to_analyze = user_info.get('settings', {}).get('days_to_analyze', 7)
-                summary_result = newsletter_manager.process_newsletters_scheduler(days=days_to_analyze, send_email=True)
-                
-                # Vérifier le résultat
-                if summary_result is True or (isinstance(summary_result, str) and summary_result.strip()):
-                    self.logger.info(f"📄 Résumé IA généré et email envoyé avec succès pour {user_info['email']} le {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-                    return True
-                elif summary_result is None:
-                    self.logger.info(f"ℹ️ Aucun email trouvé pour {user_info['email']} - Traitement réussi mais rien à traiter")
-                    return True  # Pas d'erreur, juste rien à traiter
+                # Traiter ce groupe spécifique
+                if self.process_single_group(user_info, group):
+                    processed_groups += 1
+                    self.logger.info(f"✅ Groupe '{group_title}' traité avec succès")
                 else:
-                    self.logger.error(f"❌ Échec génération résumé IA pour {user_info['email']}")
-                    self.logger.error(f"❌ Vérifiez les credentials Google et les permissions Gmail")
-                    return False
-                    
-            except Exception as e:
-                self.logger.error(f"❌ Erreur génération résumé IA: {e}")
-                return False
+                    self.logger.error(f"❌ Échec traitement du groupe '{group_title}'")
+            
+            return processed_groups > 0
             
         except Exception as e:
-            self.logger.error(f"❌ Erreur traitement {user_info['email']}: {e}")
+            self.logger.error(f"❌ Erreur traitement groupes {user_info['email']}: {e}")
+            return False
+    
+    def process_single_group(self, user_info, group):
+        """Traite un groupe spécifique"""
+        try:
+            group_title = group.get('title', 'Sans titre')
+            group_settings = group.get('settings', {})
+            group_emails = group.get('emails', [])
+            
+            # Simuler une session utilisateur pour NewsletterManager
+            import streamlit as st
+            st.session_state['user_email'] = user_info['email']
+            st.session_state['authenticated'] = True
+            
+            from newsletter_manager import NewsletterManager
+            newsletter_manager = NewsletterManager()
+            
+            # Forcer l'email utilisateur dans le NewsletterManager
+            newsletter_manager.user_email = user_info['email']
+            
+            # Désactiver la sauvegarde dans le scheduler
+            newsletter_manager._scheduler_mode = True
+            
+            # Configurer l'accès Gmail pour le NewsletterManager
+            try:
+                from secure_auth import SecureAuth
+                auth = SecureAuth()
+                
+                # Récupérer les credentials de l'utilisateur depuis le Gist
+                user_credentials = self.get_user_credentials_from_gist(user_info['email'])
+                if user_credentials:
+                    import json
+                    credentials_json = json.dumps(user_credentials)
+                    auth.set_external_credentials(credentials_json)
+                else:
+                    self.logger.error(f"❌ Aucun token OAuth2 trouvé pour {user_info['email']}")
+                    return False
+                
+                newsletter_manager.auth = auth
+            except Exception as e:
+                self.logger.error(f"❌ Erreur configuration Gmail auth: {e}")
+                return False
+            
+            # Traiter ce groupe spécifique
+            result = newsletter_manager.process_single_group(group_title, group_settings)
+            
+            if result:
+                # Mettre à jour la date de dernière exécution pour ce groupe
+                self.update_group_last_run(user_info['email'], group_title)
+                self.logger.info(f"📄 Résumé généré pour le groupe '{group_title}'")
+                return True
+            else:
+                self.logger.warning(f"ℹ️ Aucun contenu trouvé pour le groupe '{group_title}'")
+                return True  # Pas d'erreur, juste rien à traiter
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erreur traitement groupe '{group_title}': {e}")
             return False
     
     
@@ -413,8 +423,8 @@ class AutoBriefScheduler:
             self.logger.error(f"❌ Erreur récupération credentials utilisateur: {e}")
             return None
     
-    def update_last_run(self, user_email):
-        """Met à jour la date de dernière exécution pour un utilisateur dans GitHub Gist"""
+    def update_group_last_run(self, user_email, group_title):
+        """Met à jour la date de dernière exécution pour un groupe spécifique"""
         try:
             gist_id = os.getenv('GIST_ID')
             
@@ -438,9 +448,15 @@ class AutoBriefScheduler:
                     content = gist_data['files']['user_data.json']['content']
                     all_users_data = json.loads(content)
                     
-                    # Mettre à jour la date pour cet utilisateur
+                    # Mettre à jour la date pour ce groupe spécifique
                     if user_email in all_users_data:
-                        all_users_data[user_email]['settings']['last_run'] = datetime.now().isoformat()
+                        user_data = all_users_data[user_email]
+                        newsletter_groups = user_data.get('newsletter_groups', [])
+                        
+                        for group in newsletter_groups:
+                            if group.get('title') == group_title:
+                                group['settings']['last_run'] = datetime.now().isoformat()
+                                break
                         
                         # Mettre à jour le Gist
                         update_data = {
@@ -464,7 +480,7 @@ class AutoBriefScheduler:
                         )
                         
                         if update_response.status_code == 200:
-                            self.logger.info(f"✅ Date de dernière exécution mise à jour pour {user_email}")
+                            self.logger.info(f"✅ Date de dernière exécution mise à jour pour le groupe '{group_title}' de {user_email}")
                         else:
                             self.logger.error(f"❌ Erreur lors de la mise à jour du Gist: {update_response.status_code}")
                     else:
@@ -482,20 +498,17 @@ class AutoBriefScheduler:
         self.logger.info(f"🚀 Démarrage du scheduler AutoBrief - {datetime.now()}")
         
         users = self.get_all_users()
-        self.logger.info(f"👥 {len(users)} utilisateurs avec auto-send activé")
+        self.logger.info(f"👥 {len(users)} utilisateurs avec des groupes de newsletters")
         
         processed = 0
         for user_info in users:
-            if self.should_run_for_user(user_info['settings']):
-                self.logger.info(f"⏰ Il est temps de traiter {user_info['email']}")
-                
-                if self.process_user_newsletters(user_info):
-                    processed += 1
-                    self.logger.info(f"✅ Traitement réussi pour {user_info['email']}")
-                else:
-                    self.logger.error(f"❌ Échec traitement pour {user_info['email']}")
+            self.logger.info(f"🔄 Vérification des groupes pour {user_info['email']}")
+            
+            if self.process_user_groups(user_info):
+                processed += 1
+                self.logger.info(f"✅ Traitement réussi pour {user_info['email']}")
             else:
-                self.logger.info(f"⏳ Pas encore l'heure pour {user_info['email']}")
+                self.logger.info(f"ℹ️ Aucun groupe à traiter pour {user_info['email']}")
         
         self.logger.info(f"🎯 Scheduler terminé - {processed} utilisateurs traités")
         return processed

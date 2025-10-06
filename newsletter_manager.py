@@ -618,7 +618,6 @@ class NewsletterManager:
                 )
             
             with col2:
-                st.markdown("**Configuration initiale du groupe :**")
                 
                 # Configuration initiale
                 initial_frequency = st.selectbox(
@@ -693,11 +692,45 @@ class NewsletterManager:
                 emails = group.get('emails', [])
                 
                 with st.expander(f"📧 {group_title} ({len(emails)} emails)", expanded=False):
-                    # Afficher les emails du groupe
+                    # Afficher et modifier les emails du groupe
                     if emails:
                         st.markdown("**Emails de ce groupe :**")
-                        for email in emails:
-                            st.markdown(f"• {email}")
+                        
+                        # Afficher les emails avec possibilité de suppression
+                        for i, email in enumerate(emails):
+                            col1, col2 = st.columns([4, 1])
+                            with col1:
+                                st.markdown(f"• {email}")
+                            with col2:
+                                if st.button("🗑️", key=f"remove_email_{group_title}_{i}", help="Supprimer cet email"):
+                                    # Supprimer l'email
+                                    updated_emails = [e for e in emails if e != email]
+                                    if self.update_group_emails(group_title, updated_emails):
+                                        st.success(f"Email {email} supprimé")
+                                    else:
+                                        st.error("Erreur lors de la suppression")
+                        
+                        # Ajouter un nouvel email
+                        st.markdown("**Ajouter un email :**")
+                        new_email = st.text_input(
+                            "Nouvel email",
+                            placeholder="nouvel.email@example.com",
+                            key=f"new_email_{group_title}",
+                            help="Entrez un nouvel email à ajouter à ce groupe"
+                        )
+                        
+                        if st.button("Ajouter", key=f"add_email_{group_title}", type="secondary"):
+                            if new_email and '@' in new_email:
+                                if new_email not in emails:
+                                    updated_emails = emails + [new_email]
+                                    if self.update_group_emails(group_title, updated_emails):
+                                        st.success(f"Email {new_email} ajouté")
+                                    else:
+                                        st.error("Erreur lors de l'ajout de l'email")
+                                else:
+                                    st.warning("Cet email existe déjà dans le groupe")
+                            else:
+                                st.error("Veuillez entrer un email valide")
                     
                     st.markdown("---")
                     st.markdown("#### <i class='fas fa-cog'></i> Configuration du groupe", unsafe_allow_html=True)
@@ -1339,6 +1372,16 @@ class NewsletterManager:
     def update_group_last_run(self, group_title):
         """Met à jour la date de dernière exécution d'un groupe"""
         self.update_group_settings(group_title, {'last_run': datetime.now().isoformat()})
+    
+    def update_group_emails(self, group_title, new_emails):
+        """Met à jour les emails d'un groupe"""
+        newsletter_groups = self.get_newsletter_groups()
+        for group in newsletter_groups:
+            if group.get('title') == group_title:
+                group['emails'] = new_emails
+                self.save_newsletter_groups(newsletter_groups)
+                return True
+        return False
     
     def cleanup_old_data(self):
         """Nettoie les anciens paramètres globaux et ne garde que la structure par groupes"""
