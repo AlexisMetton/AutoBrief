@@ -194,17 +194,7 @@ class NewsletterManager:
             else:
                 # Pas de données dans le Gist - retourner des données par défaut
                 default_data = {
-                    'newsletters': [],
-                    'settings': {
-                        'frequency': 'weekly',
-                        'days_to_analyze': 7,
-                        'notification_email': '',
-                        'last_run': None,
-                        'auto_send': True,
-                        'schedule_day': 'monday',
-                        'schedule_time': '09:00',
-                        'schedule_timezone': 'UTC'
-                    }
+                    'newsletter_groups': []
                 }
                 # Mettre en cache les données par défaut
                 st.session_state['user_data_cache'] = default_data
@@ -213,17 +203,7 @@ class NewsletterManager:
         except Exception as e:
             # En cas d'erreur, retourner des données par défaut
             return {
-                'newsletters': [],
-                'settings': {
-                    'frequency': 'weekly',
-                    'days_to_analyze': 7,
-                    'notification_email': '',
-                    'last_run': None,
-                    'auto_send': True,
-                    'schedule_day': 'monday',
-                    'schedule_time': '09:00',
-                    'schedule_timezone': 'UTC'
-                }
+                'newsletter_groups': []
             }
     
     
@@ -266,17 +246,7 @@ class NewsletterManager:
                     else:
                         # Utilisateur pas encore dans le Gist - retourner des données par défaut
                         return {
-                            'newsletters': [],
-                            'settings': {
-                                'frequency': 'weekly',
-                                'days_to_analyze': 7,
-                                'notification_email': '',
-                                'last_run': None,
-                                'auto_send': True,
-                                'schedule_day': 'monday',
-                                'schedule_time': '09:00',
-                                'schedule_timezone': 'UTC'
-                            }
+                            'newsletter_groups': []
                         }
             return None
         except:
@@ -582,33 +552,7 @@ class NewsletterManager:
         except Exception as e:
             return True  # En cas d'erreur, on autorise l'exécution
         
-    def get_newsletters(self):
-        """Récupère la liste des emails depuis les groupes de newsletters"""
-        newsletter_groups = self.get_newsletter_groups()
-        all_emails = []
-        
-        for group in newsletter_groups:
-            if isinstance(group, dict) and 'emails' in group:
-                all_emails.extend(group['emails'])
-        
-        return all_emails
     
-    def get_user_settings(self):
-        """Récupère les paramètres utilisateur"""
-        user_data = self.load_user_data()
-        return user_data.get('settings', {
-            'frequency': 'weekly',
-            'days_to_analyze': 7,
-            'notification_email': '',
-            'last_run': None,
-            'auto_send': True
-        })
-    
-    def save_user_settings(self, settings):
-        """Sauvegarde les paramètres utilisateur"""
-        user_data = self.load_user_data()
-        user_data['settings'] = settings
-        return self.save_user_data(user_data)
     
     def should_run_automatically(self):
         """Vérifie si un résumé automatique doit être généré (basé sur les groupes)"""
@@ -624,96 +568,14 @@ class NewsletterManager:
         
         return False
     
-    def is_scheduled_time(self, settings):
-        """Vérifie si c'est le bon jour et la bonne heure pour l'exécution"""
-        try:
-            schedule_day = settings.get('schedule_day', 'monday')
-            schedule_time = settings.get('schedule_time', '09:00')
-            
-            now = datetime.now()
-            current_day = now.strftime('%A').lower()
-            current_time = now.strftime('%H:%M')
-            
-            # Vérifier le jour (pour les fréquences weekly/monthly)
-            if settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
-                if current_day != schedule_day.lower():
-                    return False
-            
-            # Vérifier l'heure (avec une marge de 30 minutes pour GitHub Actions)
-            target_hour = int(schedule_time.split(':')[0])
-            target_minute = int(schedule_time.split(':')[1])
-            current_hour = now.hour
-            current_minute = now.minute
-            
-            # GitHub Actions s'exécute à l'heure pile, on accepte +/- 30 minutes
-            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
-            return time_diff <= 30
-            
-        except Exception as e:
-            st.error(f"Erreur vérification horaire: {e}")
-            return True  # En cas d'erreur, on autorise l'exécution
     
     
     def render_newsletter_management(self):
         """Interface de gestion des newsletters"""
-        st.markdown("### <i class='fas fa-home'></i> Accueil - Gestion des newsletters", unsafe_allow_html=True)
-        
-        # Actions rapides
-        st.markdown("#### <i class='fas fa-bolt'></i> Actions rapides", unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("Tester tous les groupes", type="primary", use_container_width=True, icon=":material/play_arrow:"):
-                newsletter_groups = self.get_newsletter_groups()
-                if not newsletter_groups:
-                    st.error("Aucun groupe de newsletters configuré. Créez-en un ci-dessous.")
-                else:
-                    with st.spinner("Test de tous les groupes en cours..."):
-                        # Traiter tous les groupes actifs
-                        results = []
-                        for group in newsletter_groups:
-                            group_title = group.get('title', '')
-                            group_settings = group.get('settings', {})
-                            
-                            if group_settings.get('enabled', True):
-                                result = self.process_single_group(group_title, group_settings)
-                                if result:
-                                    results.append({
-                                        'group_title': group_title,
-                                        'result': result
-                                    })
-                        
-                        if results:
-                            st.success(f"✅ Test réussi ! {len(results)} groupe(s) traité(s). Résumés générés et emails envoyés.")
-                        else:
-                            st.warning("⚠️ Aucun contenu IA trouvé dans les newsletters pour la période sélectionnée.")
-        
-        with col2:
-            if st.button("Voir les statistiques", type="secondary", use_container_width=True, icon=":material/analytics:"):
-                newsletter_groups = self.get_newsletter_groups()
-                if newsletter_groups:
-                    total_emails = sum(len(group.get('emails', [])) for group in newsletter_groups)
-                    active_groups = sum(1 for group in newsletter_groups if group.get('settings', {}).get('enabled', True))
-                    
-                    st.info(f"📊 **Statistiques** : {len(newsletter_groups)} groupes, {active_groups} actifs, {total_emails} emails")
-                else:
-                    st.info("📊 Aucun groupe configuré")
-        
-        with col3:
-            if st.button("Aide rapide", type="secondary", use_container_width=True, icon=":material/help:"):
-                st.info("""
-                💡 **Aide rapide** :
-                1. Créez un groupe avec le bouton "➕ Ajouter un nouveau groupe"
-                2. Configurez chaque groupe individuellement
-                3. Testez vos groupes avec le bouton "Tester ce groupe"
-                4. Les envois automatiques se feront selon vos paramètres
-                """)
-        
-        st.markdown("---")
+        st.markdown("### <i class='fas fa-home'></i> Gestion des newsletters", unsafe_allow_html=True)
         
         # Ajouter un groupe de newsletters
-        with st.expander("➕ Ajouter un nouveau groupe de newsletters", expanded=True):
+        with st.expander('<i class="fas fa-plus"></i> Ajouter un nouveau groupe de newsletters', expanded=True):
             st.markdown("**Créez un nouveau groupe avec ses paramètres personnalisés**")
             
             col1, col2 = st.columns(2)
@@ -886,17 +748,7 @@ class NewsletterManager:
                             help="Email pour recevoir les résumés de ce groupe",
                             key=f"email_{group_title}"
                         )
-                        
-                        # Activer/Désactiver le groupe
-                        enabled = st.checkbox(
-                            "Activer ce groupe",
-                            value=group_settings.get('enabled', True),
-                            help="Désactivez pour arrêter le traitement automatique de ce groupe",
-                            key=f"enabled_{group_title}"
-                        )
                     
-                    # Prompt personnalisé pour ce groupe
-                    st.markdown("#### <i class='fas fa-edit'></i> Prompt personnalisé", unsafe_allow_html=True)
                     custom_prompt = st.text_area(
                         "Instructions supplémentaires pour l'IA",
                         value=group_settings.get('custom_prompt', ''),
@@ -904,6 +756,14 @@ class NewsletterManager:
                         help="Ce texte sera ajouté au prompt de base pour personnaliser l'analyse de ce groupe",
                         height=100,
                         key=f"prompt_{group_title}"
+                    )
+
+                    # Activer/Désactiver le groupe
+                    enabled = st.checkbox(
+                        "Activer ce groupe",
+                        value=group_settings.get('enabled', True),
+                        help="Désactivez pour arrêter le traitement automatique de ce groupe",
+                        key=f"enabled_{group_title}"
                     )
                     
                     # Boutons d'action
@@ -952,9 +812,9 @@ class NewsletterManager:
                             'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
                             'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
                         }[schedule_day]
-                        st.info(f"📅 Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
+                        st.info(f'<i class="far fa-calendar"></i> Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)')
                     else:
-                        st.info(f"📅 Planification : {frequency_text} à {schedule_time} heure française (±30min)")
+                        st.info(f'<i class="far fa-calendar"></i> Planification : {frequency_text} à {schedule_time} heure française (±30min)')
                     
                     # Dernière exécution
                     last_run = group_settings.get('last_run')
@@ -966,20 +826,6 @@ class NewsletterManager:
                             st.caption(f"Dernière exécution : {last_run}")
         else:
             st.info("Aucun groupe de newsletters créé. Créez-en un ci-dessus.")
-                
-        # Statistiques des groupes
-        if newsletter_groups:
-            st.markdown("#### <i class='fas fa-chart-bar'></i> Statistiques", unsafe_allow_html=True)
-            total_emails = sum(len(group.get('emails', [])) for group in newsletter_groups)
-            active_groups = sum(1 for group in newsletter_groups if group.get('settings', {}).get('enabled', True))
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Groupes créés", len(newsletter_groups))
-            with col2:
-                st.metric("Groupes actifs", active_groups)
-            with col3:
-                st.metric("Emails totaux", total_emails)
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
@@ -1470,6 +1316,32 @@ class NewsletterManager:
     def update_group_last_run(self, group_title):
         """Met à jour la date de dernière exécution d'un groupe"""
         self.update_group_settings(group_title, {'last_run': datetime.now().isoformat()})
+    
+    def cleanup_old_data(self):
+        """Nettoie les anciens paramètres globaux et ne garde que la structure par groupes"""
+        try:
+            user_data = self.load_user_data()
+            
+            # Créer une nouvelle structure propre
+            cleaned_data = {
+                'newsletter_groups': user_data.get('newsletter_groups', []),
+                'oauth_credentials': user_data.get('oauth_credentials', {})
+            }
+            
+            # Sauvegarder les données nettoyées
+            if self.save_user_data(cleaned_data):
+                if hasattr(st, 'success'):
+                    st.success("✅ Données nettoyées ! Anciens paramètres globaux supprimés.")
+                return True
+            else:
+                if hasattr(st, 'error'):
+                    st.error("❌ Erreur lors du nettoyage des données")
+                return False
+                
+        except Exception as e:
+            if hasattr(st, 'error'):
+                st.error(f"❌ Erreur lors du nettoyage: {e}")
+            return False
 
     def process_newsletters(self, days=7, send_email=False):
         """Traite toutes les newsletters et génère le résumé (version compatible avec l'ancien système)"""
@@ -1515,11 +1387,6 @@ class NewsletterManager:
         else:
             return None
     
-    def update_last_run(self):
-        """Met à jour la date de dernière exécution"""
-        settings = self.get_user_settings()
-        settings['last_run'] = datetime.now().isoformat()
-        self.save_user_settings(settings)
     
     def send_summary_email(self, summary, notification_email, group_title=None):
         """Envoie le résumé par email"""

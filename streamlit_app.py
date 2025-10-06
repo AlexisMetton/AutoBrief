@@ -41,6 +41,11 @@ st.markdown("""
         color: #2c3e50;
         margin: 0;
     }
+
+    .st-emotion-cache-105waz3 {
+        width: fit-content;
+        flex: none;
+    }
 </style>
 """, unsafe_allow_html=True)
 
