@@ -147,21 +147,28 @@ class AutoBriefScheduler:
                     self.logger.info(f"Jour incorrect pour groupe hebdomadaire - Actuel: {current_day}, Attendu: {schedule_day.lower()}")
                     return False
             
-            # Pour GitHub Actions, on accepte une marge de 30 minutes
-            target_hour = int(schedule_time.split(':')[0])
+            # Convertir l'heure française vers UTC (soustraire 2h en été, 1h en hiver)
+            # Pour simplifier, on utilise UTC+2 (été) - ajustez si nécessaire
+            target_hour_france = int(schedule_time.split(':')[0])
             target_minute = int(schedule_time.split(':')[1])
+            
+            # Conversion France -> UTC (UTC+2 en été)
+            target_hour_utc = target_hour_france - 2
+            if target_hour_utc < 0:
+                target_hour_utc += 24
+            
             current_hour = now.hour
             current_minute = now.minute
             
-            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
+            time_diff = abs((current_hour * 60 + current_minute) - (target_hour_utc * 60 + target_minute))
             
             # Marge de 30 minutes pour GitHub Actions
             is_scheduled = time_diff <= 30
             
             if is_scheduled:
-                self.logger.info(f"✅ Groupe programmé - Heure actuelle: {current_hour}:{current_minute:02d}, Heure cible: {target_hour}:{target_minute:02d}, Différence: {time_diff}min")
+                self.logger.info(f"✅ Groupe programmé - Heure actuelle (UTC): {current_hour}:{current_minute:02d}, Heure cible (France->UTC): {target_hour_france}:{target_minute:02d}->{target_hour_utc}:{target_minute:02d}, Différence: {time_diff}min")
             else:
-                self.logger.info(f"⏰ Pas encore l'heure - Heure actuelle: {current_hour}:{current_minute:02d}, Heure cible: {target_hour}:{target_minute:02d}, Différence: {time_diff}min")
+                self.logger.info(f"⏰ Pas encore l'heure - Heure actuelle (UTC): {current_hour}:{current_minute:02d}, Heure cible (France->UTC): {target_hour_france}:{target_minute:02d}->{target_hour_utc}:{target_minute:02d}, Différence: {time_diff}min")
             
             return is_scheduled
             
