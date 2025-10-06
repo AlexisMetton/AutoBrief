@@ -450,25 +450,56 @@ class NewsletterManager:
         if isinstance(newsletters, list):
             return '\n'.join(newsletters)
         return ''
+    
+    def add_newsletter_group(self, title, emails):
+        """Ajoute un groupe de newsletters"""
+        newsletter_groups = self.get_newsletter_groups()
+        
+        # Vérifier si le groupe existe déjà
+        for group in newsletter_groups:
+            if group.get('title') == title:
+                return False
+        
+        # Ajouter le nouveau groupe
+        new_group = {
+            'title': title,
+            'emails': emails
+        }
+        newsletter_groups.append(new_group)
+        self.save_newsletter_groups(newsletter_groups)
+        return True
+    
+    def remove_newsletter_group(self, title):
+        """Supprime un groupe de newsletters"""
+        newsletter_groups = self.get_newsletter_groups()
+        for i, group in enumerate(newsletter_groups):
+            if group.get('title') == title:
+                newsletter_groups.pop(i)
+                self.save_newsletter_groups(newsletter_groups)
+                return True
+        return False
+    
+    def get_newsletter_groups(self):
+        """Récupère les groupes de newsletters depuis le Gist"""
+        user_data = self.load_user_data()
+        return user_data.get('newsletter_groups', [])
+    
+    def save_newsletter_groups(self, newsletter_groups):
+        """Sauvegarde les groupes de newsletters dans le Gist"""
+        user_data = self.load_user_data()
+        user_data['newsletter_groups'] = newsletter_groups
+        self.save_user_data(user_data)
         
     def get_newsletters(self):
-        """Récupère la liste des emails depuis le Gist"""
-        user_data = self.load_user_data()
-        newsletters = user_data.get('newsletters', [])
+        """Récupère la liste des emails depuis les groupes de newsletters"""
+        newsletter_groups = self.get_newsletter_groups()
+        all_emails = []
         
-        # Si c'est une liste d'emails, la retourner directement
-        if isinstance(newsletters, list):
-            return newsletters
+        for group in newsletter_groups:
+            if isinstance(group, dict) and 'emails' in group:
+                all_emails.extend(group['emails'])
         
-        # Si c'est un format complexe, extraire les emails
-        if isinstance(newsletters, dict):
-            all_emails = []
-            for newsletter in newsletters.values():
-                if isinstance(newsletter, dict) and 'emails' in newsletter:
-                    all_emails.extend(newsletter['emails'])
-            return all_emails
-        
-        return []
+        return all_emails
     
     def get_user_settings(self):
         """Récupère les paramètres utilisateur"""
@@ -549,32 +580,58 @@ class NewsletterManager:
     
     def render_newsletter_management(self):
         """Interface de gestion des newsletters"""
-        st.markdown("### Gestion des newsletters", unsafe_allow_html=True)
+        st.markdown("### <i class='fas fa-cog'></i> Gestion des newsletters", unsafe_allow_html=True)
         
-        # Interface simple pour une seule newsletter
-        with st.expander("Configuration de la newsletter", expanded=True):
-            # Champ pour les emails
+        # Ajouter un groupe de newsletters
+        with st.expander("Ajouter un groupe de newsletters", expanded=False):
+            group_title = st.text_input(
+                "Titre du groupe",
+                placeholder="Ex: Actualités Tech",
+                help="Nom de votre groupe de newsletters"
+            )
+            
             emails_text = st.text_area(
-                "Emails à surveiller",
-                value=self.get_newsletters_text(),
+                "Emails du groupe",
                 placeholder="email1@example.com\nemail2@example.com\nemail3@example.com",
                 help="Entrez un email par ligne",
                 height=100
             )
             
-            if st.button("Sauvegarder les emails", type="primary", icon=":material/save:"):
-                if emails_text:
+            if st.button("Ajouter le groupe", type="primary", icon=":material/add:"):
+                if group_title and emails_text:
                     # Parser les emails
                     emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
                     if emails:
-                        if self.save_newsletters(emails):
-                            st.success(f"{len(emails)} emails sauvegardés")
+                        if self.add_newsletter_group(group_title, emails):
+                            st.success(f"Groupe '{group_title}' ajouté avec {len(emails)} emails")
+                            st.rerun()
                         else:
-                            st.error("Erreur lors de la sauvegarde")
+                            st.error("Erreur lors de l'ajout du groupe")
                     else:
                         st.error("Veuillez entrer au moins un email valide")
                 else:
-                    st.error("Veuillez entrer des emails")
+                    st.error("Veuillez entrer un titre et des emails")
+        
+        # Afficher les groupes existants
+        newsletter_groups = self.get_newsletter_groups()
+        if newsletter_groups:
+            st.markdown("#### <i class='fas fa-envelope'></i> Vos groupes de newsletters", unsafe_allow_html=True)
+            
+            for group in newsletter_groups:
+                with st.expander(f"📧 {group.get('title', 'Sans titre')} ({len(group.get('emails', []))} emails)", expanded=False):
+                    # Afficher les emails du groupe
+                    emails = group.get('emails', [])
+                    if emails:
+                        st.markdown("**Emails de ce groupe :**")
+                        for email in emails:
+                            st.markdown(f"• {email}")
+                    
+                    # Bouton pour supprimer le groupe
+                    if st.button("Supprimer ce groupe", key=f"delete_group_{group.get('title', '')}", type="secondary", icon=":material/delete:"):
+                        self.remove_newsletter_group(group.get('title', ''))
+                        st.rerun()
+        else:
+            st.info("Aucun groupe de newsletters créé. Créez-en un ci-dessus.")
         
         
         settings = self.get_user_settings()
