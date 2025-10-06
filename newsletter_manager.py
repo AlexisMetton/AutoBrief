@@ -676,14 +676,14 @@ class NewsletterManager:
                     if emails:
                         st.markdown(f"**Emails de cette newsletter ({len(emails)}):**")
                         for i, email in enumerate(emails):
-                col1, col2 = st.columns([4, 1])
-                with col1:
+                            col1, col2 = st.columns([4, 1])
+                            with col1:
                                 st.markdown(f"• {email}")
-                with col2:
+                            with col2:
                                 if st.button("Supprimer", key=f"delete_email_{i}_{selected_newsletter}", icon=":material/delete:"):
                                     self.remove_email_from_newsletter(selected_newsletter, email)
                         st.rerun()
-        else:
+                    else:
                         st.info("Aucun email dans cette newsletter")
                     
                     # Bouton pour supprimer la newsletter entière
@@ -748,7 +748,7 @@ class NewsletterManager:
             # Convertir en objet time pour la compatibilité
             schedule_time = datetime.strptime(schedule_time_str, '%H:%M').time()
         
-                with col2:
+        with col2:
             days_to_analyze = st.slider(
                 "Période d'analyse",
                 min_value=1,
@@ -790,8 +790,8 @@ class NewsletterManager:
             
             if self.save_user_settings(new_settings):
                 st.success("Paramètres sauvegardés !")
-                        st.rerun()
-        else:
+                st.rerun()
+            else:
                 st.error("Erreur lors de la sauvegarde")
         
         # Statut de la planification
@@ -1204,9 +1204,9 @@ class NewsletterManager:
             messages = results.get('messages', [])
             print(f"🔍 DEBUG: {len(messages)} messages trouvés")
         
-        if not messages:
+            if not messages:
                 print("❌ DEBUG: Aucun message trouvé")
-            return None
+                return None
         
             # Filtrer les emails promotionnels
             filtered_messages = []
@@ -1253,7 +1253,7 @@ class NewsletterManager:
                 output = self.summarize_newsletter(all_content, custom_prompt)
                 print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
             else:
-        output = ""
+                output = ""
                 print("❌ DEBUG: Aucun contenu éditorial à traiter")
             
             # Envoyer par email si demandé
@@ -1273,7 +1273,7 @@ class NewsletterManager:
             # Si on n'est pas dans un contexte Streamlit ou pas authentifié, 
             # on est probablement dans le scheduler - continuer silencieusement
             if hasattr(st, 'error'):
-            return None
+                return None
         
         newsletters = self.get_newsletters()
         if not newsletters:
@@ -1327,7 +1327,7 @@ class NewsletterManager:
         # Filtrer les emails promotionnels avant le traitement
         filtered_messages = []
         if hasattr(st, 'progress'):
-        progress_bar = st.progress(0)
+            progress_bar = st.progress(0)
         else:
             progress_bar = None
         
@@ -1337,7 +1337,7 @@ class NewsletterManager:
             print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)}")
             if hasattr(st, 'spinner'):
                 with st.spinner(f"Analyse de l'email {idx + 1}/{len(messages)}..."):
-                message = self.get_message(service, msg['id'])
+                    message = self.get_message(service, msg['id'])
             else:
                 message = self.get_message(service, msg['id'])
             
@@ -1363,11 +1363,11 @@ class NewsletterManager:
         all_content = ""
         for idx, msg in enumerate(filtered_messages):
             print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
-                message = self.get_message(service, msg['id'])
+            message = self.get_message(service, msg['id'])
             
-                if message:
-                    body = self.get_message_body(message)
-                    if body:
+            if message:
+                body = self.get_message_body(message)
+                if body:
                     print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
                     # Ajouter un séparateur entre les emails
                     if all_content:
