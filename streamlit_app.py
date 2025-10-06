@@ -227,21 +227,30 @@ def show_home_page(newsletter_manager):
     
     with col1:
         if st.button("Tester la newsletter", type="primary", use_container_width=True, icon=":material/play_arrow:"):
-            if not newsletter_manager.get_newsletters():
-                st.error("Aucune newsletter configurée. Allez dans l'onglet 'Newsletters' pour en ajouter.")
+            newsletter_groups = newsletter_manager.get_newsletter_groups()
+            if not newsletter_groups:
+                st.error("Aucun groupe de newsletters configuré. Allez dans l'onglet 'Newsletters' pour en ajouter.")
             else:
                 with st.spinner("Test de la newsletter en cours..."):
-                    # Récupérer la configuration utilisateur
-                    user_data = newsletter_manager.load_user_data()
-                    days_to_analyze = user_data.get('settings', {}).get('days_to_analyze', 7)
+                    # Traiter tous les groupes actifs
+                    results = []
+                    for group in newsletter_groups:
+                        group_title = group.get('title', '')
+                        group_settings = group.get('settings', {})
+                        
+                        if group_settings.get('enabled', True):
+                            result = newsletter_manager.process_single_group(group_title, group_settings)
+                            if result:
+                                results.append({
+                                    'group_title': group_title,
+                                    'result': result
+                                })
                     
-                    
-                    # Générer le résumé avec la configuration utilisateur
-                    result = newsletter_manager.process_newsletters(days=days_to_analyze, send_email=True)
-                    if result and result.strip():
-                        st.session_state['last_summary'] = result
+                    if results:
+                        # Afficher le premier résultat pour la compatibilité
+                        st.session_state['last_summary'] = results[0]['result']
                         st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                        st.success("Test de newsletter réussi ! Résumé généré et email envoyé.")
+                        st.success(f"Test réussi ! {len(results)} groupe(s) traité(s). Résumé généré et emails envoyés.")
                         st.rerun()
                     else:
                         st.warning("Aucun contenu IA trouvé dans les newsletters pour la période sélectionnée. L'email n'a pas été envoyé.")

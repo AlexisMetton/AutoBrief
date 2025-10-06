@@ -451,8 +451,8 @@ class NewsletterManager:
             return '\n'.join(newsletters)
         return ''
     
-    def add_newsletter_group(self, title, emails):
-        """Ajoute un groupe de newsletters"""
+    def add_newsletter_group(self, title, emails, group_settings=None):
+        """Ajoute un groupe de newsletters avec paramètres individuels"""
         newsletter_groups = self.get_newsletter_groups()
         
         # Vérifier si le groupe existe déjà
@@ -460,10 +460,27 @@ class NewsletterManager:
             if group.get('title') == title:
                 return False
         
-        # Ajouter le nouveau groupe
+        # Paramètres par défaut pour le groupe
+        default_group_settings = {
+            'frequency': 'weekly',
+            'schedule_day': 'monday',
+            'schedule_time': '09:00',
+            'days_to_analyze': 7,
+            'notification_email': '',
+            'custom_prompt': '',
+            'enabled': True,
+            'last_run': None
+        }
+        
+        # Fusionner avec les paramètres fournis
+        if group_settings:
+            default_group_settings.update(group_settings)
+        
+        # Ajouter le nouveau groupe avec ses paramètres
         new_group = {
             'title': title,
-            'emails': emails
+            'emails': emails,
+            'settings': default_group_settings
         }
         newsletter_groups.append(new_group)
         self.save_newsletter_groups(newsletter_groups)
@@ -489,6 +506,83 @@ class NewsletterManager:
         user_data = self.load_user_data()
         user_data['newsletter_groups'] = newsletter_groups
         self.save_user_data(user_data)
+    
+    def update_group_settings(self, group_title, new_settings):
+        """Met à jour les paramètres d'un groupe spécifique"""
+        newsletter_groups = self.get_newsletter_groups()
+        for group in newsletter_groups:
+            if group.get('title') == group_title:
+                if 'settings' not in group:
+                    group['settings'] = {}
+                group['settings'].update(new_settings)
+                self.save_newsletter_groups(newsletter_groups)
+                return True
+        return False
+    
+    def get_group_settings(self, group_title):
+        """Récupère les paramètres d'un groupe spécifique"""
+        newsletter_groups = self.get_newsletter_groups()
+        for group in newsletter_groups:
+            if group.get('title') == group_title:
+                return group.get('settings', {})
+        return {}
+    
+    def should_group_run_automatically(self, group_title):
+        """Vérifie si un groupe doit être traité automatiquement"""
+        group_settings = self.get_group_settings(group_title)
+        
+        if not group_settings.get('enabled', True):
+            return False
+        
+        last_run = group_settings.get('last_run')
+        if not last_run:
+            return True
+        
+        try:
+            last_run_date = datetime.fromisoformat(last_run)
+            frequency = group_settings.get('frequency', 'weekly')
+            
+            # Vérifier si c'est le bon jour et la bonne heure
+            if not self.is_group_scheduled_time(group_settings):
+                return False
+            
+            if frequency == 'daily':
+                return datetime.now() - last_run_date >= timedelta(days=1)
+            elif frequency == 'weekly':
+                return datetime.now() - last_run_date >= timedelta(weeks=1)
+            elif frequency == 'monthly':
+                return datetime.now() - last_run_date >= timedelta(days=30)
+        except:
+            return True
+        
+        return False
+    
+    def is_group_scheduled_time(self, group_settings):
+        """Vérifie si c'est le bon moment pour traiter un groupe"""
+        try:
+            schedule_day = group_settings.get('schedule_day', 'monday')
+            schedule_time = group_settings.get('schedule_time', '09:00')
+            
+            now = datetime.now()
+            current_day = now.strftime('%A').lower()
+            current_time = now.strftime('%H:%M')
+            
+            # Vérifier le jour (pour les fréquences weekly/monthly)
+            if group_settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
+                if current_day != schedule_day.lower():
+                    return False
+            
+            # Vérifier l'heure (avec une marge de 30 minutes)
+            target_hour = int(schedule_time.split(':')[0])
+            target_minute = int(schedule_time.split(':')[1])
+            current_hour = now.hour
+            current_minute = now.minute
+            
+            time_diff = abs((current_hour * 60 + current_minute) - (target_hour * 60 + target_minute))
+            return time_diff <= 30
+            
+        except Exception as e:
+            return True  # En cas d'erreur, on autorise l'exécution
         
     def get_newsletters(self):
         """Récupère la liste des emails depuis les groupes de newsletters"""
@@ -519,32 +613,16 @@ class NewsletterManager:
         return self.save_user_data(user_data)
     
     def should_run_automatically(self):
-        """Vérifie si un résumé automatique doit être généré"""
-        settings = self.get_user_settings()
-        
-        if not settings.get('auto_send', False):
+        """Vérifie si un résumé automatique doit être généré (basé sur les groupes)"""
+        newsletter_groups = self.get_newsletter_groups()
+        if not newsletter_groups:
             return False
         
-        last_run = settings.get('last_run')
-        if not last_run:
-            return True
-        
-        try:
-            last_run_date = datetime.fromisoformat(last_run)
-            frequency = settings.get('frequency', 'weekly')
-            
-            # Vérifier si c'est le bon jour et la bonne heure
-            if not self.is_scheduled_time(settings):
-                return False
-            
-            if frequency == 'daily':
-                return datetime.now() - last_run_date >= timedelta(days=1)
-            elif frequency == 'weekly':
-                return datetime.now() - last_run_date >= timedelta(weeks=1)
-            elif frequency == 'monthly':
-                return datetime.now() - last_run_date >= timedelta(days=30)
-        except:
-            return True
+        # Vérifier si au moins un groupe doit être traité
+        for group in newsletter_groups:
+            group_title = group.get('title', '')
+            if self.should_group_run_automatically(group_title):
+                return True
         
         return False
     
@@ -612,142 +690,183 @@ class NewsletterManager:
                 else:
                     st.error("Veuillez entrer un titre et des emails")
         
-        # Afficher les groupes existants
+        # Afficher les groupes existants avec configuration individuelle
         newsletter_groups = self.get_newsletter_groups()
         if newsletter_groups:
             st.markdown("#### <i class='fas fa-envelope'></i> Vos groupes de newsletters", unsafe_allow_html=True)
             
             for group in newsletter_groups:
-                with st.expander(f"📧 {group.get('title', 'Sans titre')} ({len(group.get('emails', []))} emails)", expanded=False):
+                group_title = group.get('title', 'Sans titre')
+                group_settings = group.get('settings', {})
+                emails = group.get('emails', [])
+                
+                with st.expander(f"📧 {group_title} ({len(emails)} emails)", expanded=False):
                     # Afficher les emails du groupe
-                    emails = group.get('emails', [])
                     if emails:
                         st.markdown("**Emails de ce groupe :**")
                         for email in emails:
                             st.markdown(f"• {email}")
                     
-                    # Bouton pour supprimer le groupe
-                    if st.button("Supprimer ce groupe", key=f"delete_group_{group.get('title', '')}", type="secondary", icon=":material/delete:"):
-                        self.remove_newsletter_group(group.get('title', ''))
-                        st.rerun()
+                    st.markdown("---")
+                    st.markdown("#### <i class='fas fa-cog'></i> Configuration du groupe", unsafe_allow_html=True)
+                    
+                    # Configuration individuelle du groupe
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        # Fréquence
+                        frequency = st.selectbox(
+                            "Fréquence",
+                            options=['daily', 'weekly', 'monthly'],
+                            index=['daily', 'weekly', 'monthly'].index(group_settings.get('frequency', 'weekly')),
+                            format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[x],
+                            help="Fréquence de génération des résumés pour ce groupe",
+                            key=f"freq_{group_title}"
+                        )
+                        
+                        # Jour de la semaine (si hebdomadaire/mensuel)
+                        if frequency in ['weekly', 'monthly']:
+                            schedule_day = st.selectbox(
+                                "Jour de la semaine",
+                                options=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+                                index=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].index(group_settings.get('schedule_day', 'monday')),
+                                format_func=lambda x: {
+                                    'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
+                                    'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
+                                }[x],
+                                help="Jour de la semaine pour l'envoi du résumé",
+                                key=f"day_{group_title}"
+                            )
+                        else:
+                            schedule_day = 'daily'
+                        
+                        # Heure d'envoi
+                        time_options = []
+                        for hour in range(24):
+                            time_str = f"{hour:02d}:00"
+                            time_options.append(time_str)
+                        
+                        current_time = group_settings.get('schedule_time', '09:00')
+                        try:
+                            current_index = time_options.index(current_time)
+                        except ValueError:
+                            current_index = 9  # 09:00 par défaut
+                        
+                        schedule_time = st.selectbox(
+                            "Heure d'envoi",
+                            options=time_options,
+                            index=current_index,
+                            help="Heure d'envoi (GitHub Actions s'exécute à l'heure pile)",
+                            key=f"time_{group_title}"
+                        )
+                    
+                    with col2:
+                        # Période d'analyse
+                        days_to_analyze = st.slider(
+                            "Période d'analyse",
+                            min_value=1,
+                            max_value=7,
+                            value=group_settings.get('days_to_analyze', 7),
+                            help="Nombre de jours à analyser pour ce groupe",
+                            key=f"days_{group_title}"
+                        )
+                        
+                        # Email de notification
+                        notification_email = st.text_input(
+                            "Email de notification",
+                            value=group_settings.get('notification_email', ''),
+                            placeholder="votre.email@example.com",
+                            help="Email pour recevoir les résumés de ce groupe",
+                            key=f"email_{group_title}"
+                        )
+                        
+                        # Activer/Désactiver le groupe
+                        enabled = st.checkbox(
+                            "Activer ce groupe",
+                            value=group_settings.get('enabled', True),
+                            help="Désactivez pour arrêter le traitement automatique de ce groupe",
+                            key=f"enabled_{group_title}"
+                        )
+                    
+                    # Prompt personnalisé pour ce groupe
+                    st.markdown("#### <i class='fas fa-edit'></i> Prompt personnalisé", unsafe_allow_html=True)
+                    custom_prompt = st.text_area(
+                        "Instructions supplémentaires pour l'IA",
+                        value=group_settings.get('custom_prompt', ''),
+                        placeholder="Ajoutez ici des instructions spécifiques pour l'analyse de ce groupe (ex: 'Focus sur les actualités tech', 'Ignorez les promotions', etc.)",
+                        help="Ce texte sera ajouté au prompt de base pour personnaliser l'analyse de ce groupe",
+                        height=100,
+                        key=f"prompt_{group_title}"
+                    )
+                    
+                    # Boutons d'action
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        if st.button("Sauvegarder", key=f"save_{group_title}", type="primary", icon=":material/save:"):
+                            new_settings = {
+                                'frequency': frequency,
+                                'schedule_day': schedule_day,
+                                'schedule_time': schedule_time,
+                                'days_to_analyze': days_to_analyze,
+                                'notification_email': notification_email,
+                                'custom_prompt': custom_prompt,
+                                'enabled': enabled,
+                                'last_run': group_settings.get('last_run')
+                            }
+                            
+                            if self.update_group_settings(group_title, new_settings):
+                                st.success("Configuration sauvegardée !")
+                                st.rerun()
+                            else:
+                                st.error("Erreur lors de la sauvegarde")
+                    
+                    with col2:
+                        if st.button("Tester ce groupe", key=f"test_{group_title}", type="secondary", icon=":material/play_arrow:"):
+                            with st.spinner(f"Test du groupe '{group_title}' en cours..."):
+                                result = self.process_single_group(group_title, group_settings)
+                                if result and result.strip():
+                                    st.success(f"Test réussi ! Résumé généré pour le groupe '{group_title}'")
+                                    st.markdown("**Aperçu du résumé :**")
+                                    st.markdown(result[:500] + "..." if len(result) > 500 else result, unsafe_allow_html=True)
+                                else:
+                                    st.warning(f"Aucun contenu trouvé pour le groupe '{group_title}'")
+                    
+                    with col3:
+                        if st.button("Supprimer", key=f"delete_{group_title}", type="secondary", icon=":material/delete:"):
+                            self.remove_newsletter_group(group_title)
+                            st.rerun()
+                    
+                    # Afficher les informations de planification
+                    frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[frequency]
+                    if frequency == 'weekly':
+                        day_text = {
+                            'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
+                            'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
+                        }[schedule_day]
+                        st.info(f"Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
+                    elif frequency == 'monthly':
+                        day_text = {
+                            'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
+                            'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
+                        }[schedule_day]
+                        st.info(f"Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
+                    else:
+                        st.info(f"Planification : {frequency_text} à {schedule_time} heure française (±30min)")
+                    
+                    # Dernière exécution
+                    last_run = group_settings.get('last_run')
+                    if last_run:
+                        try:
+                            last_run_date = datetime.fromisoformat(last_run)
+                            st.caption(f"Dernière exécution : {last_run_date.strftime('%d/%m/%Y %H:%M')}")
+                        except:
+                            st.caption(f"Dernière exécution : {last_run}")
         else:
             st.info("Aucun groupe de newsletters créé. Créez-en un ci-dessus.")
         
-        
-        settings = self.get_user_settings()
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            frequency = st.selectbox(
-                "Fréquence",
-                options=['daily', 'weekly'],
-                index=['daily', 'weekly'].index(settings.get('frequency', 'weekly')),
-                format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[x],
-                help="Fréquence de génération des résumés"
-            )
-            
-            # Configuration du jour et de l'heure
-            if frequency == 'weekly':
-                schedule_day = st.selectbox(
-                    "Jour de la semaine",
-                    options=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
-                    index=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].index(settings.get('schedule_day', 'monday')),
-                    format_func=lambda x: {
-                        'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
-                        'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
-                    }[x],
-                    help="Jour de la semaine pour l'envoi du résumé"
-                )
-                schedule_days = [schedule_day]
-            else:
-                schedule_day = 'daily'
-                schedule_days = ['daily']
-            
-            # Créer une liste d'heures pile (00:00, 01:00, 02:00, etc.)
-            time_options = []
-            for hour in range(24):
-                time_str = f"{hour:02d}:00"
-                time_options.append(time_str)
-            
-            # Trouver l'index de l'heure actuelle
-            current_time = settings.get('schedule_time', '09:00')
-            try:
-                current_index = time_options.index(current_time)
-            except ValueError:
-                current_index = 9  # 09:00 par défaut
-            
-            schedule_time_str = st.selectbox(
-                "Heure d'envoi",
-                options=time_options,
-                index=current_index,
-                help="Heure d'envoi (GitHub Actions s'exécute à 09:00 UTC par défaut)"
-            )
-            
-            # Convertir en objet time pour la compatibilité
-            schedule_time = datetime.strptime(schedule_time_str, '%H:%M').time()
-        
-        with col2:
-            days_to_analyze = st.slider(
-                "Période d'analyse",
-                min_value=1,
-                max_value=7,
-                value=settings.get('days_to_analyze', 7),
-                help="Nombre de jours à analyser pour chaque résumé"
-            )
-            
-            notification_email = st.text_input(
-                "Email de notification",
-                value=settings.get('notification_email', ''),
-                placeholder="votre.email@example.com",
-                help="Email pour recevoir les résumés automatiques (optionnel)"
-            )
-        
-        # Prompt personnalisé
-        st.markdown("#### <i class='fas fa-edit'></i> Prompt personnalisé", unsafe_allow_html=True)
-        custom_prompt = st.text_area(
-            "Instructions supplémentaires pour l'IA",
-            value=settings.get('custom_prompt', ''),
-            placeholder="Ajoutez ici des instructions spécifiques pour l'analyse des newsletters (ex: 'Focus sur les actualités tech', 'Ignorez les promotions', etc.)",
-            help="Ce texte sera ajouté au prompt de base pour personnaliser l'analyse des newsletters",
-            height=100
-        )
-        
-        # Sauvegarder les paramètres
-        if st.button("Sauvegarder les paramètres", type="primary", icon=":material/save:"):
-            new_settings = {
-                'auto_send': True,  # Toujours activé
-                'frequency': frequency,
-                'days_to_analyze': days_to_analyze,
-                'notification_email': notification_email,
-                'custom_prompt': custom_prompt,
-                'last_run': settings.get('last_run'),
-                'schedule_day': schedule_day,
-                'schedule_time': schedule_time.strftime('%H:%M'),
-                'schedule_timezone': 'UTC'
-            }
-            
-            if self.save_user_settings(new_settings):
-                st.success("Paramètres sauvegardés !")
-                st.rerun()
-            else:
-                st.error("Erreur lors de la sauvegarde")
-        
-        # Statut de la planification
-        frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[frequency]
-        
-        # Afficher directement l'heure programmée (déjà en heure française)
-        if frequency == 'weekly':
-            day_text = {
-                'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
-                'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
-            }[schedule_day]
-            st.info(f"Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
-        else:
-            st.info(f"Planification : {frequency_text} à {schedule_time} heure française (±30min)")
-        
-        # Note sur la tolérance et conversion
-        st.caption("Tolérance de ±30 minutes pour compenser les délais d'automatisation GitHub Actions")
+        # Note d'information sur la nouvelle configuration
+        st.info("💡 **Nouvelle fonctionnalité** : Chaque groupe de newsletters peut maintenant avoir ses propres paramètres (fréquence, heure, période d'analyse, email de notification, prompt personnalisé). Configurez chaque groupe individuellement ci-dessus.")
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
@@ -1109,45 +1228,83 @@ class NewsletterManager:
         """Version simplifiée pour le scheduler (sans Streamlit)"""
         print(f"🔍 DEBUG: process_newsletters_scheduler démarré - days={days}, send_email={send_email}")
         
-        newsletters = self.get_newsletters()
-        if not newsletters:
-            print("❌ DEBUG: Aucune newsletter configurée")
+        # Traiter tous les groupes qui doivent être exécutés
+        newsletter_groups = self.get_newsletter_groups()
+        if not newsletter_groups:
+            print("❌ DEBUG: Aucun groupe de newsletters configuré")
             return None
         
-        # Les newsletters sont maintenant directement une liste d'emails
-        all_emails = newsletters
+        results = []
+        for group in newsletter_groups:
+            group_title = group.get('title', '')
+            group_settings = group.get('settings', {})
+            
+            # Vérifier si ce groupe doit être traité
+            if not self.should_group_run_automatically(group_title):
+                print(f"⏭️ DEBUG: Groupe '{group_title}' ne doit pas être traité maintenant")
+                continue
+            
+            print(f"🔄 DEBUG: Traitement du groupe '{group_title}'")
+            
+            # Traiter ce groupe spécifique
+            group_result = self.process_single_group(group_title, group_settings)
+            if group_result:
+                results.append({
+                    'group_title': group_title,
+                    'result': group_result
+                })
+                
+                # Mettre à jour la date de dernière exécution pour ce groupe
+                self.update_group_last_run(group_title)
         
-        print(f"✅ DEBUG: {len(newsletters)} newsletters trouvées avec {len(all_emails)} emails au total: {all_emails}")
-        
-        service = self.auth.get_gmail_service()
-        if not service:
-            print("❌ DEBUG: Impossible d'obtenir le service Gmail")
-            return None
-        print("✅ DEBUG: Service Gmail obtenu")
-        
-        # Récupérer le prompt personnalisé
-        settings = self.get_user_settings()
-        custom_prompt = settings.get('custom_prompt', '')
-        print(f"🔍 DEBUG: Custom prompt: '{custom_prompt[:50]}...'")
-        
-        # Créer la requête
-        query = self.get_query_for_emails(all_emails, days)
-        print(f"🔍 DEBUG: Requête Gmail: {query}")
-        
-        # Récupérer les messages
+        return results if results else None
+    
+    def process_single_group(self, group_title, group_settings):
+        """Traite un groupe de newsletters spécifique"""
         try:
+            # Récupérer les emails du groupe
+            newsletter_groups = self.get_newsletter_groups()
+            group_emails = []
+            for group in newsletter_groups:
+                if group.get('title') == group_title:
+                    group_emails = group.get('emails', [])
+                    break
+            
+            if not group_emails:
+                print(f"❌ DEBUG: Aucun email trouvé pour le groupe '{group_title}'")
+                return None
+            
+            print(f"✅ DEBUG: Groupe '{group_title}' avec {len(group_emails)} emails: {group_emails}")
+            
+            service = self.auth.get_gmail_service()
+            if not service:
+                print("❌ DEBUG: Impossible d'obtenir le service Gmail")
+                return None
+            
+            # Récupérer les paramètres du groupe
+            days_to_analyze = group_settings.get('days_to_analyze', 7)
+            custom_prompt = group_settings.get('custom_prompt', '')
+            notification_email = group_settings.get('notification_email', '')
+            
+            print(f"🔍 DEBUG: Paramètres groupe - jours: {days_to_analyze}, prompt: '{custom_prompt[:50]}...'")
+            
+            # Créer la requête pour ce groupe
+            query = self.get_query_for_emails(group_emails, days_to_analyze)
+            print(f"🔍 DEBUG: Requête Gmail pour groupe: {query}")
+            
+            # Récupérer les messages
             results = service.users().messages().list(userId='me', q=query).execute()
             messages = results.get('messages', [])
-            print(f"🔍 DEBUG: {len(messages)} messages trouvés")
-        
+            print(f"🔍 DEBUG: {len(messages)} messages trouvés pour le groupe")
+            
             if not messages:
-                print("❌ DEBUG: Aucun message trouvé")
+                print(f"❌ DEBUG: Aucun message trouvé pour le groupe '{group_title}'")
                 return None
-        
+            
             # Filtrer les emails promotionnels
             filtered_messages = []
             for idx, msg in enumerate(messages):
-                print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)}")
+                print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)} du groupe")
                 message = self.get_message(service, msg['id'])
                 
                 if message:
@@ -1160,12 +1317,12 @@ class NewsletterManager:
                 else:
                     print("❌ DEBUG: Impossible de récupérer le message")
             
-            print(f"🔍 DEBUG: {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
+            print(f"🔍 DEBUG: {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés pour le groupe")
             
             # Traiter seulement les emails non-promotionnels
             all_content = ""
             for idx, msg in enumerate(filtered_messages):
-                print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
+                print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)} du groupe")
                 message = self.get_message(service, msg['id'])
                 
                 if message:
@@ -1181,29 +1338,33 @@ class NewsletterManager:
                 else:
                     print("❌ DEBUG: Impossible de récupérer le message")
             
-            print(f"🔍 DEBUG: Contenu éditorial global: {len(all_content)} caractères")
+            print(f"🔍 DEBUG: Contenu éditorial du groupe: {len(all_content)} caractères")
             
-            # Générer un seul résumé pour tous les emails non-promotionnels
+            # Générer le résumé pour ce groupe
             if all_content.strip():
-                print(f"🔍 DEBUG: Génération du résumé global...")
+                print(f"🔍 DEBUG: Génération du résumé pour le groupe '{group_title}'...")
                 output = self.summarize_newsletter(all_content, custom_prompt)
-                print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
+                print(f"🔍 DEBUG: Résumé du groupe généré: {len(output) if output else 0} caractères")
+                
+                # Envoyer par email si configuré
+                if output and notification_email and notification_email.strip():
+                    self.send_summary_email(output, notification_email, group_title)
+                
+                return output
             else:
-                output = ""
-                print("❌ DEBUG: Aucun contenu éditorial à traiter")
-            
-            # Envoyer par email si demandé
-            if output and send_email:
-                notification_email = settings.get('notification_email')
-                if notification_email and notification_email.strip():
-                    self.send_summary_email(output, notification_email)
-            
-            return output if output.strip() else None
+                print(f"❌ DEBUG: Aucun contenu éditorial trouvé pour le groupe '{group_title}'")
+                return None
+                
         except Exception as e:
+            print(f"❌ DEBUG: Erreur lors du traitement du groupe '{group_title}': {e}")
             return None
+    
+    def update_group_last_run(self, group_title):
+        """Met à jour la date de dernière exécution d'un groupe"""
+        self.update_group_settings(group_title, {'last_run': datetime.now().isoformat()})
 
     def process_newsletters(self, days=7, send_email=False):
-        """Traite toutes les newsletters et génère le résumé"""
+        """Traite toutes les newsletters et génère le résumé (version compatible avec l'ancien système)"""
         # Vérifier l'authentification avant de continuer
         if not hasattr(st, 'session_state') or not st.session_state.get('authenticated', False):
             # Si on n'est pas dans un contexte Streamlit ou pas authentifié, 
@@ -1211,146 +1372,48 @@ class NewsletterManager:
             if hasattr(st, 'error'):
                 return None
         
-        newsletters = self.get_newsletters()
-        if not newsletters:
+        # Utiliser la nouvelle logique par groupes
+        newsletter_groups = self.get_newsletter_groups()
+        if not newsletter_groups:
             if hasattr(st, 'error'):
-                st.error("Aucune newsletter configurée")
+                st.error("Aucun groupe de newsletters configuré")
             else:
-                print("❌ Aucune newsletter configurée")
+                print("❌ Aucun groupe de newsletters configuré")
             return None
         
-        # Les newsletters sont maintenant directement une liste d'emails
-        all_emails = newsletters
-        
-        service = self.auth.get_gmail_service()
-        if not service:
-            if hasattr(st, 'error'):
-                st.error("Impossible de se connecter à Gmail")
-            else:
-                print("❌ Impossible de se connecter à Gmail")
-            return None
-        
-        # Récupérer le prompt personnalisé
-        settings = self.get_user_settings()
-        custom_prompt = settings.get('custom_prompt', '')
-        
-        # Créer la requête
-        query = self.get_query_for_emails(all_emails, days)
-        
-        
-        # Récupérer les messages
-        if hasattr(st, 'spinner'):
-            with st.spinner("Recherche des emails..."):
-                messages = self.list_messages(service, query)
-        else:
-            messages = self.list_messages(service, query)
-        
-        if not messages:
-            if hasattr(st, 'warning'):
-                st.warning("Aucun email trouvé pour la période sélectionnée")
-            else:
-                print("Aucun email trouvé pour la période sélectionnée")
-            return None
-        
-        if hasattr(st, 'success'):
-            st.success(f"{len(messages)} emails trouvés")
-        else:
-            print(f"{len(messages)} emails trouvés")
-        
-        # Filtrer les emails promotionnels avant le traitement
-        filtered_messages = []
-        if hasattr(st, 'progress'):
-            progress_bar = st.progress(0)
-        else:
-            progress_bar = None
-        
-        print(f"🔍 DEBUG: Filtrage de {len(messages)} messages")
-        
-        for idx, msg in enumerate(messages):
-            print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)}")
-            if hasattr(st, 'spinner'):
-                with st.spinner(f"Analyse de l'email {idx + 1}/{len(messages)}..."):
-                    message = self.get_message(service, msg['id'])
-            else:
-                message = self.get_message(service, msg['id'])
+        # Traiter tous les groupes qui doivent être exécutés
+        results = []
+        for group in newsletter_groups:
+            group_title = group.get('title', '')
+            group_settings = group.get('settings', {})
             
-            if message:
-                # Analyser le message pour détecter s'il est promotionnel
-                is_promotional = self.is_promotional_email(message)
-                if is_promotional:
-                    print(f"🚫 DEBUG: Email {idx + 1} détecté comme promotionnel - ignoré")
-                else:
-                    print(f"✅ DEBUG: Email {idx + 1} validé comme contenu éditorial")
-                    filtered_messages.append(msg)
-            else:
-                print("❌ DEBUG: Impossible de récupérer le message")
+            # Vérifier si ce groupe doit être traité
+            if not self.should_group_run_automatically(group_title):
+                if hasattr(st, 'info'):
+                    st.info(f"⏭️ Groupe '{group_title}' ne doit pas être traité maintenant")
+                continue
             
-            if progress_bar:
-                progress_bar.progress((idx + 1) / len(messages))
-        
-        print(f"🔍 DEBUG: {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
-        if hasattr(st, 'info'):
-            st.info(f"📊 {len(filtered_messages)}/{len(messages)} emails non-promotionnels trouvés")
-        
-        # Traiter seulement les emails non-promotionnels
-        all_content = ""
-        for idx, msg in enumerate(filtered_messages):
-            print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
-            message = self.get_message(service, msg['id'])
-            
-            if message:
-                body = self.get_message_body(message)
-                if body:
-                    print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
-                    # Ajouter un séparateur entre les emails
-                    if all_content:
-                        all_content += "\n\n--- NOUVEL EMAIL ---\n\n"
-                    all_content += body
-                    print(f"✅ DEBUG: Contenu éditorial ajouté")
-                else:
-                    print("❌ DEBUG: Impossible d'extraire le corps du message")
-            else:
-                print("❌ DEBUG: Impossible de récupérer le message")
-        
-        print(f"🔍 DEBUG: Contenu éditorial global: {len(all_content)} caractères")
-        if hasattr(st, 'info'):
-            st.info(f"📄 Contenu éditorial global: {len(all_content)} caractères")
-        
-        # Générer un seul résumé pour tous les emails non-promotionnels
-        if all_content.strip():
-            print(f"🔍 DEBUG: Génération du résumé global...")
-            print(f"🔍 DEBUG: Contenu à traiter: {len(all_content)} caractères")
             if hasattr(st, 'info'):
-                st.info(f"🤖 Génération du résumé IA...")
-            output = self.summarize_newsletter(all_content, custom_prompt)
-            print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
-            if output:
-                print(f"🔍 DEBUG: Résumé non vide - traitement réussi")
-                if hasattr(st, 'success'):
-                    st.success(f"✅ Résumé IA généré: {len(output)} caractères")
-            else:
-                print(f"❌ DEBUG: Résumé vide - problème avec l'IA")
-                if hasattr(st, 'error'):
-                    st.error("❌ L'IA n'a pas généré de contenu")
+                st.info(f"🔄 Traitement du groupe '{group_title}'")
+            
+            # Traiter ce groupe spécifique
+            group_result = self.process_single_group(group_title, group_settings)
+            if group_result:
+                results.append({
+                    'group_title': group_title,
+                    'result': group_result
+                })
+                
+                # Mettre à jour la date de dernière exécution pour ce groupe
+                self.update_group_last_run(group_title)
+        
+        # Retourner le premier résultat pour la compatibilité avec l'ancien système
+        if results:
+            return results[0]['result']
         else:
-            output = ""
-            print("❌ DEBUG: Aucun contenu éditorial à traiter")
             if hasattr(st, 'warning'):
-                st.warning("⚠️ Aucun contenu éditorial trouvé")
-        
-        # Mettre à jour la date de dernière exécution
-        if output:
-            self.update_last_run()
-        
-        # Envoyer par email seulement si demandé ET s'il y a du contenu
-        if send_email and output and output.strip():
-            settings = self.get_user_settings()
-            notification_email = settings.get('notification_email')
-            if notification_email and notification_email.strip():
-                self.send_summary_email(output, notification_email)
-        
-        print(f"🔍 DEBUG: Valeur finale retournée: '{output}' (type: {type(output)}, longueur: {len(output) if output else 0})")
-        return output
+                st.warning("Aucun groupe ne doit être traité maintenant")
+            return None
     
     def update_last_run(self):
         """Met à jour la date de dernière exécution"""
@@ -1358,7 +1421,7 @@ class NewsletterManager:
         settings['last_run'] = datetime.now().isoformat()
         self.save_user_settings(settings)
     
-    def send_summary_email(self, summary, notification_email):
+    def send_summary_email(self, summary, notification_email, group_title=None):
         """Envoie le résumé par email"""
         try:
             import smtplib
@@ -1370,14 +1433,20 @@ class NewsletterManager:
             # Configuration Gmail (utilise les mêmes credentials OAuth2)
             service = self.auth.get_gmail_service()
             if not service:
-                st.error("Impossible d'accéder à Gmail pour l'envoi")
+                if hasattr(st, 'error'):
+                    st.error("Impossible d'accéder à Gmail pour l'envoi")
                 return False
             
             # Créer le message
             message = MIMEMultipart()
             message['From'] = service.users().getProfile(userId='me').execute()['emailAddress']
             message['To'] = notification_email
-            message['Subject'] = f"Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
+            
+            # Sujet avec nom du groupe si fourni
+            if group_title:
+                message['Subject'] = f"Résumé AutoBrief - {group_title} - {datetime.now().strftime('%d/%m/%Y')}"
+            else:
+                message['Subject'] = f"Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}"
             
             # Corps du message HTML
             # Si le summary contient déjà du HTML, l'utiliser directement
@@ -1386,10 +1455,11 @@ class NewsletterManager:
                 message.attach(MIMEText(summary, 'html', 'utf-8'))
             else:
                 # Sinon, créer un HTML basique
+                group_info = f" - {group_title}" if group_title else ""
                 body = f"""
                 <html>
                 <body>
-                <h2>Résumé AutoBrief - {datetime.now().strftime('%d/%m/%Y')}</h2>
+                <h2>Résumé AutoBrief{group_info} - {datetime.now().strftime('%d/%m/%Y')}</h2>
                 <p>Bonjour,</p>
                 <p>Voici votre résumé automatique des newsletters :</p>
                 <div>{summary}</div>
@@ -1407,10 +1477,12 @@ class NewsletterManager:
             # Envoyer l'email
             sent_message = service.users().messages().send(userId='me', body=raw_message).execute()
             
-            st.success(f"Résumé envoyé par email à {notification_email}")
+            if hasattr(st, 'success'):
+                st.success(f"Résumé envoyé par email à {notification_email}")
             return True
             
         except Exception as e:
-            st.error(f"Erreur lors de l'envoi: {e}")
+            if hasattr(st, 'error'):
+                st.error(f"Erreur lors de l'envoi: {e}")
             return False
 
