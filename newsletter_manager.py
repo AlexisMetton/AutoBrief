@@ -613,17 +613,34 @@ class NewsletterManager:
                 schedule_day = 'daily'
                 schedule_days = ['daily']
             
-            schedule_time = st.time_input(
-                "Heure d'envoi (UTC)",
-                value=datetime.strptime(settings.get('schedule_time', '09:00'), '%H:%M').time(),
-                help="Heure d'envoi en UTC (GitHub Actions s'exécute à 09:00 UTC par défaut)"
+            # Créer une liste d'heures pile (00:00, 01:00, 02:00, etc.)
+            time_options = []
+            for hour in range(24):
+                time_str = f"{hour:02d}:00"
+                time_options.append(time_str)
+            
+            # Trouver l'index de l'heure actuelle
+            current_time = settings.get('schedule_time', '09:00')
+            try:
+                current_index = time_options.index(current_time)
+            except ValueError:
+                current_index = 9  # 09:00 par défaut
+            
+            schedule_time_str = st.selectbox(
+                "Heure d'envoi",
+                options=time_options,
+                index=current_index,
+                help="Heure d'envoi (GitHub Actions s'exécute à 09:00 UTC par défaut)"
             )
+            
+            # Convertir en objet time pour la compatibilité
+            schedule_time = datetime.strptime(schedule_time_str, '%H:%M').time()
         
         with col2:
             days_to_analyze = st.slider(
                 "Période d'analyse",
                 min_value=1,
-                max_value=30,
+                max_value=7,
                 value=settings.get('days_to_analyze', 7),
                 help="Nombre de jours à analyser pour chaque résumé"
             )
