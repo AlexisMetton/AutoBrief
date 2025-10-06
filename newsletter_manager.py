@@ -575,6 +575,10 @@ class NewsletterManager:
     
     def should_run_automatically(self):
         """Vérifie si un résumé automatique doit être généré (basé sur les groupes)"""
+        # Ne pas se déclencher en mode interface utilisateur
+        if hasattr(st, 'session_state') and st.session_state.get('just_connected', False):
+            return False
+        
         newsletter_groups = self.get_newsletter_groups()
         if not newsletter_groups:
             return False

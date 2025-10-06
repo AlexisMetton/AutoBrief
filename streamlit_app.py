@@ -89,15 +89,8 @@ def main():
     if not auth.authenticate_user():
         st.stop()
         
-    # Vérifier si un résumé automatique doit être généré (APRÈS authentification)
-    if newsletter_manager.should_run_automatically():
-        with st.spinner("Génération automatique en cours..."):
-            result = newsletter_manager.process_newsletters()
-            if result:
-                st.session_state['last_summary'] = result
-                st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                st.success("Résumé automatique généré !")
-                st.rerun()
+    # L'envoi automatique se fait uniquement via GitHub Actions
+    # Pas d'envoi automatique lors de la connexion à l'interface
     
     # Navigation avec session state
     if 'current_page' not in st.session_state:
