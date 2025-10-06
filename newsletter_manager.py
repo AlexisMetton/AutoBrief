@@ -661,34 +661,77 @@ class NewsletterManager:
         st.markdown("### <i class='fas fa-cog'></i> Gestion des newsletters", unsafe_allow_html=True)
         
         # Ajouter un groupe de newsletters
-        with st.expander("Ajouter un groupe de newsletters", expanded=False):
-            group_title = st.text_input(
-                "Titre du groupe",
-                placeholder="Ex: Actualités Tech",
-                help="Nom de votre groupe de newsletters"
-            )
+        with st.expander("➕ Ajouter un nouveau groupe de newsletters", expanded=True):
+            st.markdown("**Créez un nouveau groupe avec ses paramètres personnalisés**")
             
-            emails_text = st.text_area(
-                "Emails du groupe",
-                placeholder="email1@example.com\nemail2@example.com\nemail3@example.com",
-                help="Entrez un email par ligne",
-                height=100
-            )
+            col1, col2 = st.columns(2)
             
-            if st.button("Ajouter le groupe", type="primary", icon=":material/add:"):
+            with col1:
+                group_title = st.text_input(
+                    "Titre du groupe",
+                    placeholder="Ex: Actualités Tech",
+                    help="Nom de votre groupe de newsletters"
+                )
+                
+                emails_text = st.text_area(
+                    "Emails du groupe",
+                    placeholder="email1@example.com\nemail2@example.com\nemail3@example.com",
+                    help="Entrez un email par ligne",
+                    height=120
+                )
+            
+            with col2:
+                st.markdown("**Configuration initiale du groupe :**")
+                
+                # Configuration initiale
+                initial_frequency = st.selectbox(
+                    "Fréquence",
+                    options=['daily', 'weekly', 'monthly'],
+                    index=1,  # weekly par défaut
+                    format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[x],
+                    help="Fréquence de génération des résumés"
+                )
+                
+                initial_email = st.text_input(
+                    "Email de notification",
+                    placeholder="votre.email@example.com",
+                    help="Email pour recevoir les résumés de ce groupe"
+                )
+                
+                initial_days = st.slider(
+                    "Période d'analyse",
+                    min_value=1,
+                    max_value=7,
+                    value=7,
+                    help="Nombre de jours à analyser"
+                )
+            
+            if st.button("Créer le groupe", type="primary", icon=":material/add:", use_container_width=True):
                 if group_title and emails_text:
                     # Parser les emails
                     emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
                     if emails:
-                        if self.add_newsletter_group(group_title, emails):
-                            st.success(f"Groupe '{group_title}' ajouté avec {len(emails)} emails")
+                        # Configuration initiale du groupe
+                        initial_settings = {
+                            'frequency': initial_frequency,
+                            'schedule_day': 'monday',
+                            'schedule_time': '09:00',
+                            'days_to_analyze': initial_days,
+                            'notification_email': initial_email,
+                            'custom_prompt': '',
+                            'enabled': True,
+                            'last_run': None
+                        }
+                        
+                        if self.add_newsletter_group(group_title, emails, initial_settings):
+                            st.success(f"✅ Groupe '{group_title}' créé avec {len(emails)} emails et configuration initiale")
                             st.rerun()
                         else:
-                            st.error("Erreur lors de l'ajout du groupe")
+                            st.error("❌ Erreur lors de la création du groupe")
                     else:
-                        st.error("Veuillez entrer au moins un email valide")
+                        st.error("❌ Veuillez entrer au moins un email valide")
                 else:
-                    st.error("Veuillez entrer un titre et des emails")
+                    st.error("❌ Veuillez entrer un titre et des emails")
         
         # Afficher les groupes existants avec configuration individuelle
         newsletter_groups = self.get_newsletter_groups()
@@ -866,7 +909,21 @@ class NewsletterManager:
             st.info("Aucun groupe de newsletters créé. Créez-en un ci-dessus.")
         
         # Note d'information sur la nouvelle configuration
-        st.info("💡 **Nouvelle fonctionnalité** : Chaque groupe de newsletters peut maintenant avoir ses propres paramètres (fréquence, heure, période d'analyse, email de notification, prompt personnalisé). Configurez chaque groupe individuellement ci-dessus.")
+        st.info("💡 **Configuration par groupe** : Chaque groupe de newsletters peut avoir ses propres paramètres (fréquence, heure, période d'analyse, email de notification, prompt personnalisé). Configurez chaque groupe individuellement ci-dessus.")
+        
+        # Statistiques des groupes
+        if newsletter_groups:
+            st.markdown("#### <i class='fas fa-chart-bar'></i> Statistiques", unsafe_allow_html=True)
+            total_emails = sum(len(group.get('emails', [])) for group in newsletter_groups)
+            active_groups = sum(1 for group in newsletter_groups if group.get('settings', {}).get('enabled', True))
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Groupes créés", len(newsletter_groups))
+            with col2:
+                st.metric("Groupes actifs", active_groups)
+            with col3:
+                st.metric("Emails totaux", total_emails)
     
     def get_query_for_emails(self, emails, days=7):
         """Génère la requête Gmail pour récupérer les emails"""
