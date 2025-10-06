@@ -1251,7 +1251,7 @@ class NewsletterManager:
         # Filtrer les emails promotionnels avant le traitement
         filtered_messages = []
         if hasattr(st, 'progress'):
-        progress_bar = st.progress(0)
+            progress_bar = st.progress(0)
         else:
             progress_bar = None
         
@@ -1287,11 +1287,11 @@ class NewsletterManager:
         all_content = ""
         for idx, msg in enumerate(filtered_messages):
             print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
-                message = self.get_message(service, msg['id'])
+            message = self.get_message(service, msg['id'])
             
-                if message:
-                    body = self.get_message_body(message)
-                    if body:
+            if message:
+                body = self.get_message_body(message)
+                if body:
                     print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
                     # Ajouter un séparateur entre les emails
                     if all_content:
