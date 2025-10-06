@@ -173,7 +173,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # Navigation visible et fonctionnelle
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("Accueil", key="nav_home", type="primary" if st.session_state.current_page == "Accueil" else "secondary"):
@@ -181,16 +181,11 @@ def main():
             st.rerun()
     
     with col2:
-        if st.button("Newsletters", key="nav_newsletters", type="primary" if st.session_state.current_page == "Newsletters" else "secondary"):
-            st.session_state.current_page = "Newsletters"
-            st.rerun()
-    
-    with col3:
         if st.button("Paramètres", key="nav_settings", type="primary" if st.session_state.current_page == "Paramètres" else "secondary"):
             st.session_state.current_page = "Paramètres"
             st.rerun()
     
-    with col4:
+    with col3:
         if st.button("Aide", key="nav_help", type="primary" if st.session_state.current_page == "Aide" else "secondary"):
             st.session_state.current_page = "Aide"
             st.rerun()
@@ -209,73 +204,12 @@ def main():
     
     # Contenu principal selon la page sélectionnée
     if page == "Accueil":
-        show_home_page(newsletter_manager)
-    elif page == "Newsletters":
         show_newsletters_page(newsletter_manager)
     elif page == "Paramètres":
         show_configuration_page()
     elif page == "Aide":
         show_help_page()
 
-def show_home_page(newsletter_manager):
-    """Page d'accueil avec vue d'ensemble"""
-    
-    # Actions rapides
-    st.markdown("### <i class='fas fa-bolt'></i> Actions rapides", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("Tester la newsletter", type="primary", use_container_width=True, icon=":material/play_arrow:"):
-            newsletter_groups = newsletter_manager.get_newsletter_groups()
-            if not newsletter_groups:
-                st.error("Aucun groupe de newsletters configuré. Allez dans l'onglet 'Newsletters' pour en ajouter.")
-            else:
-                with st.spinner("Test de la newsletter en cours..."):
-                    # Traiter tous les groupes actifs
-                    results = []
-                    for group in newsletter_groups:
-                        group_title = group.get('title', '')
-                        group_settings = group.get('settings', {})
-                        
-                        if group_settings.get('enabled', True):
-                            result = newsletter_manager.process_single_group(group_title, group_settings)
-                            if result:
-                                results.append({
-                                    'group_title': group_title,
-                                    'result': result
-                                })
-                    
-                    if results:
-                        # Afficher le premier résultat pour la compatibilité
-                        st.session_state['last_summary'] = results[0]['result']
-                        st.session_state['last_run'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                        st.success(f"Test réussi ! {len(results)} groupe(s) traité(s). Résumé généré et emails envoyés.")
-                        st.rerun()
-                    else:
-                        st.warning("Aucun contenu IA trouvé dans les newsletters pour la période sélectionnée. L'email n'a pas été envoyé.")
-    
-    with col2:
-        if st.button("Tester l'envoi", type="secondary", use_container_width=True, icon=":material/send:"):
-            settings = newsletter_manager.get_user_settings()
-            notification_email = settings.get('notification_email')
-            if notification_email and notification_email.strip():
-                try:
-                    test_summary = "Ceci est un test d'envoi d'email depuis AutoBrief. Si vous recevez ce message, l'envoi automatique fonctionne correctement !"
-                    if newsletter_manager.send_summary_email(test_summary, notification_email):
-                        st.success(f"Email de test envoyé à {notification_email}")
-                    else:
-                        st.error("Erreur lors de l'envoi de l'email de test")
-                except Exception as e:
-                    st.error(f"Erreur: {e}")
-            else:
-                st.warning("Configurez d'abord une adresse email de notification")
-    
-    # Dernier résumé
-    if 'last_summary' in st.session_state:
-        st.markdown("### <i class='fas fa-file-alt'></i> Dernier résumé généré", unsafe_allow_html=True)
-        with st.expander("Voir le résumé", expanded=False):
-            st.markdown(st.session_state['last_summary'], unsafe_allow_html=True)
 
 def show_newsletters_page(newsletter_manager):
     """Page de gestion des newsletters"""

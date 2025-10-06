@@ -550,8 +550,6 @@ class NewsletterManager:
                 return datetime.now() - last_run_date >= timedelta(days=1)
             elif frequency == 'weekly':
                 return datetime.now() - last_run_date >= timedelta(weeks=1)
-            elif frequency == 'monthly':
-                return datetime.now() - last_run_date >= timedelta(days=30)
         except:
             return True
         
@@ -567,8 +565,8 @@ class NewsletterManager:
             current_day = now.strftime('%A').lower()
             current_time = now.strftime('%H:%M')
             
-            # Vérifier le jour (pour les fréquences weekly/monthly)
-            if group_settings.get('frequency', 'weekly') in ['weekly', 'monthly']:
+            # Vérifier le jour (pour la fréquence weekly)
+            if group_settings.get('frequency', 'weekly') == 'weekly':
                 if current_day != schedule_day.lower():
                     return False
             
@@ -658,7 +656,62 @@ class NewsletterManager:
     
     def render_newsletter_management(self):
         """Interface de gestion des newsletters"""
-        st.markdown("### <i class='fas fa-cog'></i> Gestion des newsletters", unsafe_allow_html=True)
+        st.markdown("### <i class='fas fa-home'></i> Accueil - Gestion des newsletters", unsafe_allow_html=True)
+        
+        # Actions rapides
+        st.markdown("#### <i class='fas fa-bolt'></i> Actions rapides", unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("Tester tous les groupes", type="primary", use_container_width=True, icon=":material/play_arrow:"):
+                newsletter_groups = self.get_newsletter_groups()
+                if not newsletter_groups:
+                    st.error("Aucun groupe de newsletters configuré. Créez-en un ci-dessous.")
+                else:
+                    with st.spinner("Test de tous les groupes en cours..."):
+                        # Traiter tous les groupes actifs
+                        results = []
+                        for group in newsletter_groups:
+                            group_title = group.get('title', '')
+                            group_settings = group.get('settings', {})
+                            
+                            if group_settings.get('enabled', True):
+                                result = self.process_single_group(group_title, group_settings)
+                                if result:
+                                    results.append({
+                                        'group_title': group_title,
+                                        'result': result
+                                    })
+                        
+                        if results:
+                            st.success(f"✅ Test réussi ! {len(results)} groupe(s) traité(s). Résumés générés et emails envoyés.")
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ Aucun contenu IA trouvé dans les newsletters pour la période sélectionnée.")
+        
+        with col2:
+            if st.button("Voir les statistiques", type="secondary", use_container_width=True, icon=":material/analytics:"):
+                newsletter_groups = self.get_newsletter_groups()
+                if newsletter_groups:
+                    total_emails = sum(len(group.get('emails', [])) for group in newsletter_groups)
+                    active_groups = sum(1 for group in newsletter_groups if group.get('settings', {}).get('enabled', True))
+                    
+                    st.info(f"📊 **Statistiques** : {len(newsletter_groups)} groupes, {active_groups} actifs, {total_emails} emails")
+                else:
+                    st.info("📊 Aucun groupe configuré")
+        
+        with col3:
+            if st.button("Aide rapide", type="secondary", use_container_width=True, icon=":material/help:"):
+                st.info("""
+                💡 **Aide rapide** :
+                1. Créez un groupe avec le bouton "➕ Ajouter un nouveau groupe"
+                2. Configurez chaque groupe individuellement
+                3. Testez vos groupes avec le bouton "Tester ce groupe"
+                4. Les envois automatiques se feront selon vos paramètres
+                """)
+        
+        st.markdown("---")
         
         # Ajouter un groupe de newsletters
         with st.expander("➕ Ajouter un nouveau groupe de newsletters", expanded=True):
@@ -686,10 +739,23 @@ class NewsletterManager:
                 # Configuration initiale
                 initial_frequency = st.selectbox(
                     "Fréquence",
-                    options=['daily', 'weekly', 'monthly'],
+                    options=['daily', 'weekly'],
                     index=1,  # weekly par défaut
-                    format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[x],
+                    format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[x],
                     help="Fréquence de génération des résumés"
+                )
+                
+                # Heure d'envoi
+                time_options = []
+                for hour in range(24):
+                    time_str = f"{hour:02d}:00"
+                    time_options.append(time_str)
+                
+                initial_time = st.selectbox(
+                    "Heure d'envoi",
+                    options=time_options,
+                    index=9,  # 09:00 par défaut
+                    help="Heure d'envoi (GitHub Actions s'exécute à l'heure pile)"
                 )
                 
                 initial_email = st.text_input(
@@ -715,7 +781,7 @@ class NewsletterManager:
                         initial_settings = {
                             'frequency': initial_frequency,
                             'schedule_day': 'monday',
-                            'schedule_time': '09:00',
+                            'schedule_time': initial_time,
                             'days_to_analyze': initial_days,
                             'notification_email': initial_email,
                             'custom_prompt': '',
@@ -760,15 +826,15 @@ class NewsletterManager:
                         # Fréquence
                         frequency = st.selectbox(
                             "Fréquence",
-                            options=['daily', 'weekly', 'monthly'],
-                            index=['daily', 'weekly', 'monthly'].index(group_settings.get('frequency', 'weekly')),
-                            format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[x],
+                            options=['daily', 'weekly'],
+                            index=['daily', 'weekly'].index(group_settings.get('frequency', 'weekly')),
+                            format_func=lambda x: {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[x],
                             help="Fréquence de génération des résumés pour ce groupe",
                             key=f"freq_{group_title}"
                         )
                         
-                        # Jour de la semaine (si hebdomadaire/mensuel)
-                        if frequency in ['weekly', 'monthly']:
+                        # Jour de la semaine (si hebdomadaire)
+                        if frequency == 'weekly':
                             schedule_day = st.selectbox(
                                 "Jour de la semaine",
                                 options=['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
@@ -881,21 +947,15 @@ class NewsletterManager:
                             st.rerun()
                     
                     # Afficher les informations de planification
-                    frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire', 'monthly': 'Mensuelle'}[frequency]
+                    frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[frequency]
                     if frequency == 'weekly':
                         day_text = {
                             'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
                             'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
                         }[schedule_day]
-                        st.info(f"Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
-                    elif frequency == 'monthly':
-                        day_text = {
-                            'monday': 'Lundi', 'tuesday': 'Mardi', 'wednesday': 'Mercredi', 
-                            'thursday': 'Jeudi', 'friday': 'Vendredi', 'saturday': 'Samedi', 'sunday': 'Dimanche'
-                        }[schedule_day]
-                        st.info(f"Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
+                        st.info(f"📅 Planification : {frequency_text} le {day_text} à {schedule_time} heure française (±30min)")
                     else:
-                        st.info(f"Planification : {frequency_text} à {schedule_time} heure française (±30min)")
+                        st.info(f"📅 Planification : {frequency_text} à {schedule_time} heure française (±30min)")
                     
                     # Dernière exécution
                     last_run = group_settings.get('last_run')
@@ -907,10 +967,7 @@ class NewsletterManager:
                             st.caption(f"Dernière exécution : {last_run}")
         else:
             st.info("Aucun groupe de newsletters créé. Créez-en un ci-dessus.")
-        
-        # Note d'information sur la nouvelle configuration
-        st.info("💡 **Configuration par groupe** : Chaque groupe de newsletters peut avoir ses propres paramètres (fréquence, heure, période d'analyse, email de notification, prompt personnalisé). Configurez chaque groupe individuellement ci-dessus.")
-        
+                
         # Statistiques des groupes
         if newsletter_groups:
             st.markdown("#### <i class='fas fa-chart-bar'></i> Statistiques", unsafe_allow_html=True)
@@ -1296,11 +1353,6 @@ class NewsletterManager:
             group_title = group.get('title', '')
             group_settings = group.get('settings', {})
             
-            # Vérifier si ce groupe doit être traité
-            if not self.should_group_run_automatically(group_title):
-                print(f"⏭️ DEBUG: Groupe '{group_title}' ne doit pas être traité maintenant")
-                continue
-            
             print(f"🔄 DEBUG: Traitement du groupe '{group_title}'")
             
             # Traiter ce groupe spécifique
@@ -1443,13 +1495,7 @@ class NewsletterManager:
         for group in newsletter_groups:
             group_title = group.get('title', '')
             group_settings = group.get('settings', {})
-            
-            # Vérifier si ce groupe doit être traité
-            if not self.should_group_run_automatically(group_title):
-                if hasattr(st, 'info'):
-                    st.info(f"⏭️ Groupe '{group_title}' ne doit pas être traité maintenant")
-                continue
-            
+                        
             if hasattr(st, 'info'):
                 st.info(f"🔄 Traitement du groupe '{group_title}'")
             
@@ -1468,8 +1514,6 @@ class NewsletterManager:
         if results:
             return results[0]['result']
         else:
-            if hasattr(st, 'warning'):
-                st.warning("Aucun groupe ne doit être traité maintenant")
             return None
     
     def update_last_run(self):
