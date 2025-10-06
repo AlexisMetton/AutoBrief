@@ -447,7 +447,18 @@ class NewsletterManager:
         """Récupère la liste des newsletters depuis le Gist"""
         # Charger les données utilisateur depuis le Gist
         user_data = self.load_user_data()
-        return user_data.get('newsletters', [])
+        
+        # D'abord essayer les newsletters individuelles
+        individual_newsletters = user_data.get('newsletters', [])
+        if individual_newsletters:
+            return individual_newsletters
+        
+        # Sinon, essayer les anciens groupes
+        newsletter_groups = user_data.get('newsletter_groups', [])
+        if newsletter_groups:
+            return newsletter_groups
+        
+        return []
     
     def get_user_settings(self):
         """Récupère les paramètres utilisateur"""
@@ -525,29 +536,55 @@ class NewsletterManager:
             st.error(f"Erreur vérification horaire: {e}")
             return True  # En cas d'erreur, on autorise l'exécution
     
-    def add_newsletter_group(self, title, emails):
-        """Ajoute un groupe de newsletters avec un titre et plusieurs emails"""
-        newsletter_groups = self.get_newsletter_groups()
-        if title and emails:
-            # Vérifier que le titre n'existe pas déjà
-            if title not in [group.get('title', '') for group in newsletter_groups]:
-                newsletter_group = {
-                    'title': title,
-                    'emails': emails
-                }
-                newsletter_groups.append(newsletter_group)
-                self.save_newsletter_groups(newsletter_groups)
-                return True
+    def create_newsletter(self, title):
+        """Crée une nouvelle newsletter vide"""
+        newsletters = self.get_newsletters()
+        if title and title not in [newsletter.get('title', newsletter.get('name', '')) for newsletter in newsletters]:
+            newsletter_data = {
+                'title': title,
+                'emails': []
+            }
+            newsletters.append(newsletter_data)
+            self.save_newsletters(newsletters)
+            return True
         return False
     
-    def remove_newsletter_group(self, title):
-        """Supprime un groupe de newsletters"""
-        newsletter_groups = self.get_newsletter_groups()
-        for i, group in enumerate(newsletter_groups):
-            if group.get('title') == title:
-                newsletter_groups.pop(i)
-                self.save_newsletter_groups(newsletter_groups)
-                return True
+    def add_emails_to_newsletter(self, newsletter_title, emails):
+        """Ajoute des emails à une newsletter existante"""
+        newsletters = self.get_newsletters()
+        for newsletter in newsletters:
+            if newsletter.get('title', newsletter.get('name', '')) == newsletter_title:
+                existing_emails = newsletter.get('emails', [])
+                # Ajouter seulement les nouveaux emails
+                for email in emails:
+                    if email not in existing_emails:
+                        existing_emails.append(email)
+                newsletter['emails'] = existing_emails
+            self.save_newsletters(newsletters)
+            return True
+        return False
+    
+    def remove_email_from_newsletter(self, newsletter_title, email):
+        """Supprime un email d'une newsletter"""
+        newsletters = self.get_newsletters()
+        for newsletter in newsletters:
+            if newsletter.get('title', newsletter.get('name', '')) == newsletter_title:
+                emails = newsletter.get('emails', [])
+                if email in emails:
+                    emails.remove(email)
+                    newsletter['emails'] = emails
+            self.save_newsletters(newsletters)
+            return True
+        return False
+    
+    def remove_newsletter(self, newsletter_title):
+        """Supprime une newsletter entière"""
+        newsletters = self.get_newsletters()
+        for i, newsletter in enumerate(newsletters):
+            if newsletter.get('title', newsletter.get('name', '')) == newsletter_title:
+                newsletters.pop(i)
+            self.save_newsletters(newsletters)
+            return True
         return False
     
     def get_newsletter_groups(self):
@@ -562,63 +599,99 @@ class NewsletterManager:
         self.save_user_data(user_data)
     
     def render_newsletter_management(self):
-        """Interface de gestion des groupes de newsletters"""
+        """Interface de gestion des newsletters avec onglets"""
         
-        # Ajouter un groupe de newsletters
-        with st.expander('Ajouter un groupe de newsletters', expanded=True):
+        # Créer une nouvelle newsletter
+        with st.expander('Créer une nouvelle newsletter', expanded=True):
             col1, col2 = st.columns([2, 1])
             with col1:
-                group_title = st.text_input(
-                    "Titre du groupe:",
+                new_newsletter_title = st.text_input(
+                    "Nom de la newsletter:",
                     placeholder="ex: Actualités Tech",
-                    help="Nom du groupe de newsletters"
+                    help="Nom de votre newsletter"
                 )
             with col2:
                 st.write("")  # Espacement
                 st.write("")  # Espacement
-            
-            st.markdown("**Emails du groupe (un par ligne):**")
-            emails_text = st.text_area(
-                "Liste des emails:",
-                placeholder="newsletter1@example.com\nnewsletter2@example.com\nnewsletter3@example.com",
-                help="Entrez un email par ligne",
-                height=100
-            )
-            
-            if st.button("Ajouter le groupe", type="primary", icon=":material/add:"):
-                if group_title and emails_text:
-                    # Parser les emails
-                    emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
-                    if emails:
-                        if self.add_newsletter_group(group_title, emails):
-                            st.success(f"Groupe '{group_title}' ajouté avec {len(emails)} emails")
+                if st.button("Créer la newsletter", type="primary", icon=":material/add:"):
+                    if new_newsletter_title:
+                        if self.create_newsletter(new_newsletter_title):
+                            st.success(f"Newsletter '{new_newsletter_title}' créée")
                             st.rerun()
                         else:
-                            st.error("Ce titre de groupe existe déjà")
+                            st.error("Cette newsletter existe déjà")
                     else:
-                        st.error("Veuillez entrer au moins un email valide")
-                else:
-                    st.error("Veuillez remplir le titre et les emails")
+                        st.error("Veuillez entrer un nom de newsletter")
         
-        # Liste des groupes de newsletters
-        newsletter_groups = self.get_newsletter_groups()
-        if newsletter_groups:
-            st.markdown("#### <i class='fas fa-envelope'></i> Groupes de newsletters surveillés", unsafe_allow_html=True)
-            for i, group in enumerate(newsletter_groups):
-                title = group.get('title', 'Sans titre')
-                emails = group.get('emails', [])
+        # Récupérer les newsletters existantes
+        newsletters = self.get_newsletters()
+        if newsletters:
+            st.markdown("#### <i class='fas fa-envelope'></i> Vos newsletters", unsafe_allow_html=True)
+            
+            # Créer des onglets pour chaque newsletter
+            newsletter_names = [newsletter.get('title', newsletter.get('name', 'Sans nom')) for newsletter in newsletters]
+            selected_newsletter = st.selectbox(
+                "Choisir une newsletter:",
+                options=newsletter_names,
+                help="Sélectionnez une newsletter pour la gérer"
+            )
+            
+            if selected_newsletter:
+                # Trouver la newsletter sélectionnée
+                selected_newsletter_data = None
+                for newsletter in newsletters:
+                    if newsletter.get('title', newsletter.get('name', '')) == selected_newsletter:
+                        selected_newsletter_data = newsletter
+                        break
                 
-                with st.expander(f"📧 {title} ({len(emails)} emails)", expanded=False):
-                    col1, col2 = st.columns([4, 1])
-                    with col1:
-                        for j, email in enumerate(emails):
-                            st.markdown(f"• {email}")
-                    with col2:
-                        if st.button("Supprimer", key=f"delete_group_{i}", icon=":material/delete:"):
-                            self.remove_newsletter_group(title)
-                            st.rerun()
+                if selected_newsletter_data:
+                    st.markdown(f"### 📧 {selected_newsletter}")
+                    
+                    # Ajouter des emails à cette newsletter
+                    with st.expander('Ajouter des emails à cette newsletter', expanded=True):
+                        emails_text = st.text_area(
+                            "Emails à ajouter (un par ligne):",
+                            placeholder="email1@example.com\nemail2@example.com\nemail3@example.com",
+                            help="Entrez un email par ligne",
+                            height=100
+                        )
+                        
+                        if st.button("Ajouter les emails", type="primary", icon=":material/add:"):
+                            if emails_text:
+                                # Parser les emails
+                                new_emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
+                                if new_emails:
+                                    if self.add_emails_to_newsletter(selected_newsletter, new_emails):
+                                        st.success(f"{len(new_emails)} emails ajoutés à '{selected_newsletter}'")
+                                        st.rerun()
+                                    else:
+                                        st.error("Erreur lors de l'ajout des emails")
+                                else:
+                                    st.error("Veuillez entrer au moins un email valide")
+                            else:
+                                st.error("Veuillez entrer des emails")
+                    
+                    # Afficher les emails de cette newsletter
+                    emails = selected_newsletter_data.get('emails', [])
+                    if emails:
+                        st.markdown(f"**Emails de cette newsletter ({len(emails)}):**")
+                        for i, email in enumerate(emails):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                                st.markdown(f"• {email}")
+                with col2:
+                                if st.button("Supprimer", key=f"delete_email_{i}_{selected_newsletter}", icon=":material/delete:"):
+                                    self.remove_email_from_newsletter(selected_newsletter, email)
+                        st.rerun()
         else:
-            st.info("Aucun groupe de newsletters configuré. Ajoutez-en un ci-dessus.")
+                        st.info("Aucun email dans cette newsletter")
+                    
+                    # Bouton pour supprimer la newsletter entière
+                    if st.button("Supprimer cette newsletter", type="secondary", icon=":material/delete:"):
+                        self.remove_newsletter(selected_newsletter)
+                        st.rerun()
+        else:
+            st.info("Aucune newsletter créée. Créez-en une ci-dessus.")
         
         
         settings = self.get_user_settings()
@@ -675,7 +748,7 @@ class NewsletterManager:
             # Convertir en objet time pour la compatibilité
             schedule_time = datetime.strptime(schedule_time_str, '%H:%M').time()
         
-        with col2:
+                with col2:
             days_to_analyze = st.slider(
                 "Période d'analyse",
                 min_value=1,
@@ -717,8 +790,8 @@ class NewsletterManager:
             
             if self.save_user_settings(new_settings):
                 st.success("Paramètres sauvegardés !")
-                st.rerun()
-            else:
+                        st.rerun()
+        else:
                 st.error("Erreur lors de la sauvegarde")
         
         # Statut de la planification
@@ -1097,18 +1170,18 @@ class NewsletterManager:
         """Version simplifiée pour le scheduler (sans Streamlit)"""
         print(f"🔍 DEBUG: process_newsletters_scheduler démarré - days={days}, send_email={send_email}")
         
-        newsletter_groups = self.get_newsletter_groups()
-        if not newsletter_groups:
-            print("❌ DEBUG: Aucun groupe de newsletters configuré")
+        newsletters = self.get_newsletters()
+        if not newsletters:
+            print("❌ DEBUG: Aucune newsletter configurée")
             return None
         
-        # Extraire tous les emails de tous les groupes
+        # Extraire tous les emails de toutes les newsletters
         all_emails = []
-        for group in newsletter_groups:
-            emails = group.get('emails', [])
+        for newsletter in newsletters:
+            emails = newsletter.get('emails', [])
             all_emails.extend(emails)
         
-        print(f"✅ DEBUG: {len(newsletter_groups)} groupes trouvés avec {len(all_emails)} emails au total: {all_emails}")
+        print(f"✅ DEBUG: {len(newsletters)} newsletters trouvées avec {len(all_emails)} emails au total: {all_emails}")
         
         service = self.auth.get_gmail_service()
         if not service:
@@ -1130,11 +1203,11 @@ class NewsletterManager:
             results = service.users().messages().list(userId='me', q=query).execute()
             messages = results.get('messages', [])
             print(f"🔍 DEBUG: {len(messages)} messages trouvés")
-            
-            if not messages:
+        
+        if not messages:
                 print("❌ DEBUG: Aucun message trouvé")
-                return None
-            
+            return None
+        
             # Filtrer les emails promotionnels
             filtered_messages = []
             for idx, msg in enumerate(messages):
@@ -1180,7 +1253,7 @@ class NewsletterManager:
                 output = self.summarize_newsletter(all_content, custom_prompt)
                 print(f"🔍 DEBUG: Résumé global généré: {len(output) if output else 0} caractères")
             else:
-                output = ""
+        output = ""
                 print("❌ DEBUG: Aucun contenu éditorial à traiter")
             
             # Envoyer par email si demandé
@@ -1200,20 +1273,20 @@ class NewsletterManager:
             # Si on n'est pas dans un contexte Streamlit ou pas authentifié, 
             # on est probablement dans le scheduler - continuer silencieusement
             if hasattr(st, 'error'):
-                return None
-        
-        newsletter_groups = self.get_newsletter_groups()
-        if not newsletter_groups:
-            if hasattr(st, 'error'):
-                st.error("Aucun groupe de newsletters configuré")
-            else:
-                print("❌ Aucun groupe de newsletters configuré")
             return None
         
-        # Extraire tous les emails de tous les groupes
+        newsletters = self.get_newsletters()
+        if not newsletters:
+            if hasattr(st, 'error'):
+                st.error("Aucune newsletter configurée")
+            else:
+                print("❌ Aucune newsletter configurée")
+            return None
+        
+        # Extraire tous les emails de toutes les newsletters
         all_emails = []
-        for group in newsletter_groups:
-            emails = group.get('emails', [])
+        for newsletter in newsletters:
+            emails = newsletter.get('emails', [])
             all_emails.extend(emails)
         
         service = self.auth.get_gmail_service()
@@ -1254,7 +1327,7 @@ class NewsletterManager:
         # Filtrer les emails promotionnels avant le traitement
         filtered_messages = []
         if hasattr(st, 'progress'):
-            progress_bar = st.progress(0)
+        progress_bar = st.progress(0)
         else:
             progress_bar = None
         
@@ -1264,7 +1337,7 @@ class NewsletterManager:
             print(f"🔍 DEBUG: Analyse message {idx + 1}/{len(messages)}")
             if hasattr(st, 'spinner'):
                 with st.spinner(f"Analyse de l'email {idx + 1}/{len(messages)}..."):
-                    message = self.get_message(service, msg['id'])
+                message = self.get_message(service, msg['id'])
             else:
                 message = self.get_message(service, msg['id'])
             
@@ -1290,11 +1363,11 @@ class NewsletterManager:
         all_content = ""
         for idx, msg in enumerate(filtered_messages):
             print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
-            message = self.get_message(service, msg['id'])
+                message = self.get_message(service, msg['id'])
             
-            if message:
-                body = self.get_message_body(message)
-                if body:
+                if message:
+                    body = self.get_message_body(message)
+                    if body:
                     print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
                     # Ajouter un séparateur entre les emails
                     if all_content:
