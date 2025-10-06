@@ -702,7 +702,7 @@ class NewsletterManager:
                             with col1:
                                 st.markdown(f"• {email}")
                             with col2:
-                                if st.button("<i class='fas fa-trash-alt'></i>", key=f"remove_email_{group_title}_{i}", help="Supprimer cet email"):
+                                if st.button('<i class="fa-solid fa-trash"></i>', key=f"remove_email_{group_title}_{i}", help="Supprimer cet email"):
                                     # Supprimer l'email
                                     updated_emails = [e for e in emails if e != email]
                                     if self.update_group_emails(group_title, updated_emails):
