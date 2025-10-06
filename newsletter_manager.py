@@ -525,11 +525,18 @@ class NewsletterManager:
             st.error(f"Erreur vérification horaire: {e}")
             return True  # En cas d'erreur, on autorise l'exécution
     
-    def add_newsletter(self, email):
+    def add_newsletter(self, email, title=None):
         """Ajoute une newsletter à la liste"""
         newsletters = self.get_newsletters()
-        if email and email not in newsletters:
-            newsletters.append(email)
+        if email and email not in [n.get('email', n) if isinstance(n, dict) else n for n in newsletters]:
+            # Si pas de titre fourni, utiliser l'email comme titre
+            if not title:
+                title = email
+            newsletter_data = {
+                'email': email,
+                'title': title
+            }
+            newsletters.append(newsletter_data)
             self.save_newsletters(newsletters)
             return True
         return False
@@ -537,8 +544,15 @@ class NewsletterManager:
     def remove_newsletter(self, email):
         """Supprime une newsletter de la liste"""
         newsletters = self.get_newsletters()
-        if email in newsletters:
-            newsletters.remove(email)
+        # Gérer les anciens formats (string) et nouveaux formats (dict)
+        for i, newsletter in enumerate(newsletters):
+            if isinstance(newsletter, dict):
+                if newsletter.get('email') == email:
+                    newsletters.pop(i)
+                    self.save_newsletters(newsletters)
+                    return True
+            elif newsletter == email:
+                newsletters.pop(i)
             self.save_newsletters(newsletters)
             return True
         return False
@@ -548,7 +562,7 @@ class NewsletterManager:
         
         # Ajouter une newsletter
         with st.expander('Ajouter une newsletter', expanded=True):
-            col1, col2 = st.columns([3, 1])
+            col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
                 new_email = st.text_input(
                     "Email de la newsletter:",
@@ -556,13 +570,22 @@ class NewsletterManager:
                     help="Entrez l'adresse email qui vous envoie les newsletters"
                 )
             with col2:
+                new_title = st.text_input(
+                    "Titre de la newsletter:",
+                    placeholder="Nom de la newsletter",
+                    help="Titre personnalisé pour identifier cette newsletter"
+                )
+            with col3:
+                st.write("")  # Espacement
+                st.write("")  # Espacement
                 if st.button("Ajouter", type="primary", icon=":material/add:"):
                     if new_email and "@" in new_email:
-                        if self.add_newsletter(new_email):
-                            st.success(f"Newsletter {new_email} ajoutée")
+                        if self.add_newsletter(new_email, new_title):
+                            title_display = new_title if new_title else new_email
+                            st.success(f"Newsletter '{title_display}' ajoutée")
                             st.rerun()
                         else:
-                            pass
+                            st.error("Cette newsletter existe déjà")
                     else:
                         st.error("Veuillez entrer une adresse email valide")
         
@@ -570,16 +593,25 @@ class NewsletterManager:
         newsletters = self.get_newsletters()
         if newsletters:
             st.markdown("#### <i class='fas fa-envelope'></i> Newsletters surveillées", unsafe_allow_html=True)
-            for i, email in enumerate(newsletters):
+            for i, newsletter in enumerate(newsletters):
+                # Gérer les anciens formats (string) et nouveaux formats (dict)
+                if isinstance(newsletter, dict):
+                    email = newsletter.get('email', '')
+                    title = newsletter.get('title', email)
+                else:
+                    email = newsletter
+                    title = email
+                
                 col1, col2 = st.columns([4, 1])
                 with col1:
-                    st.write(f"{email}")
+                    st.markdown(f"**{title}**")
+                    st.caption(f"📧 {email}")
                 with col2:
                     if st.button("Supprimer", key=f"delete_{i}", icon=":material/delete:"):
                         self.remove_newsletter(email)
                         st.rerun()
         else:
-            pass
+            st.info("Aucune newsletter configurée. Ajoutez-en une ci-dessus.")
         
         
         settings = self.get_user_settings()
@@ -1062,7 +1094,16 @@ class NewsletterManager:
         if not newsletters:
             print("❌ DEBUG: Aucune newsletter configurée")
             return None
-        print(f"✅ DEBUG: {len(newsletters)} newsletters trouvées: {newsletters}")
+        
+        # Extraire les emails du nouveau format
+        newsletter_emails = []
+        for newsletter in newsletters:
+            if isinstance(newsletter, dict):
+                newsletter_emails.append(newsletter.get('email', ''))
+            else:
+                newsletter_emails.append(newsletter)
+        
+        print(f"✅ DEBUG: {len(newsletter_emails)} newsletters trouvées: {newsletter_emails}")
         
         service = self.auth.get_gmail_service()
         if not service:
@@ -1076,7 +1117,7 @@ class NewsletterManager:
         print(f"🔍 DEBUG: Custom prompt: '{custom_prompt[:50]}...'")
         
         # Créer la requête
-        query = self.get_query_for_emails(newsletters, days)
+        query = self.get_query_for_emails(newsletter_emails, days)
         print(f"🔍 DEBUG: Requête Gmail: {query}")
         
         # Récupérer les messages
@@ -1164,6 +1205,14 @@ class NewsletterManager:
                 print("❌ Aucune newsletter configurée")
             return None
         
+        # Extraire les emails du nouveau format
+        newsletter_emails = []
+        for newsletter in newsletters:
+            if isinstance(newsletter, dict):
+                newsletter_emails.append(newsletter.get('email', ''))
+            else:
+                newsletter_emails.append(newsletter)
+        
         service = self.auth.get_gmail_service()
         if not service:
             if hasattr(st, 'error'):
@@ -1177,7 +1226,7 @@ class NewsletterManager:
         custom_prompt = settings.get('custom_prompt', '')
         
         # Créer la requête
-        query = self.get_query_for_emails(newsletters, days)
+        query = self.get_query_for_emails(newsletter_emails, days)
         
         
         # Récupérer les messages
@@ -1202,7 +1251,7 @@ class NewsletterManager:
         # Filtrer les emails promotionnels avant le traitement
         filtered_messages = []
         if hasattr(st, 'progress'):
-            progress_bar = st.progress(0)
+        progress_bar = st.progress(0)
         else:
             progress_bar = None
         
@@ -1238,11 +1287,11 @@ class NewsletterManager:
         all_content = ""
         for idx, msg in enumerate(filtered_messages):
             print(f"🔍 DEBUG: Extraction contenu éditorial {idx + 1}/{len(filtered_messages)}")
-            message = self.get_message(service, msg['id'])
+                message = self.get_message(service, msg['id'])
             
-            if message:
-                body = self.get_message_body(message)
-                if body:
+                if message:
+                    body = self.get_message_body(message)
+                    if body:
                     print(f"🔍 DEBUG: Corps du message extrait ({len(body)} caractères)")
                     # Ajouter un séparateur entre les emails
                     if all_content:
