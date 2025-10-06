@@ -442,21 +442,31 @@ class NewsletterManager:
         user_data = self.load_user_data()
         user_data['newsletters'] = newsletters
         self.save_user_data(user_data)
+        return True
+    
+    def get_newsletters_text(self):
+        """Récupère les emails sous forme de texte pour l'affichage"""
+        newsletters = self.get_newsletters()
+        if isinstance(newsletters, list):
+            return '\n'.join(newsletters)
+        return ''
         
     def get_newsletters(self):
-        """Récupère la liste des newsletters depuis le Gist"""
-        # Charger les données utilisateur depuis le Gist
+        """Récupère la liste des emails depuis le Gist"""
         user_data = self.load_user_data()
+        newsletters = user_data.get('newsletters', [])
         
-        # D'abord essayer les newsletters individuelles
-        individual_newsletters = user_data.get('newsletters', [])
-        if individual_newsletters:
-            return individual_newsletters
+        # Si c'est une liste d'emails, la retourner directement
+        if isinstance(newsletters, list):
+            return newsletters
         
-        # Sinon, essayer les anciens groupes
-        newsletter_groups = user_data.get('newsletter_groups', [])
-        if newsletter_groups:
-            return newsletter_groups
+        # Si c'est un format complexe, extraire les emails
+        if isinstance(newsletters, dict):
+            all_emails = []
+            for newsletter in newsletters.values():
+                if isinstance(newsletter, dict) and 'emails' in newsletter:
+                    all_emails.extend(newsletter['emails'])
+            return all_emails
         
         return []
     
@@ -536,162 +546,35 @@ class NewsletterManager:
             st.error(f"Erreur vérification horaire: {e}")
             return True  # En cas d'erreur, on autorise l'exécution
     
-    def create_newsletter(self, title):
-        """Crée une nouvelle newsletter vide"""
-        newsletters = self.get_newsletters()
-        if title and title not in [newsletter.get('title', newsletter.get('name', '')) for newsletter in newsletters]:
-            newsletter_data = {
-                'title': title,
-                'emails': []
-            }
-            newsletters.append(newsletter_data)
-            self.save_newsletters(newsletters)
-            return True
-        return False
-    
-    def add_emails_to_newsletter(self, newsletter_title, emails):
-        """Ajoute des emails à une newsletter existante"""
-        newsletters = self.get_newsletters()
-        for newsletter in newsletters:
-            if newsletter.get('title', newsletter.get('name', '')) == newsletter_title:
-                existing_emails = newsletter.get('emails', [])
-                # Ajouter seulement les nouveaux emails
-                for email in emails:
-                    if email not in existing_emails:
-                        existing_emails.append(email)
-                newsletter['emails'] = existing_emails
-            self.save_newsletters(newsletters)
-            return True
-        return False
-    
-    def remove_email_from_newsletter(self, newsletter_title, email):
-        """Supprime un email d'une newsletter"""
-        newsletters = self.get_newsletters()
-        for newsletter in newsletters:
-            if newsletter.get('title', newsletter.get('name', '')) == newsletter_title:
-                emails = newsletter.get('emails', [])
-                if email in emails:
-                    emails.remove(email)
-                    newsletter['emails'] = emails
-            self.save_newsletters(newsletters)
-            return True
-        return False
-    
-    def remove_newsletter(self, newsletter_title):
-        """Supprime une newsletter entière"""
-        newsletters = self.get_newsletters()
-        for i, newsletter in enumerate(newsletters):
-            if newsletter.get('title', newsletter.get('name', '')) == newsletter_title:
-                newsletters.pop(i)
-            self.save_newsletters(newsletters)
-            return True
-        return False
-    
-    def get_newsletter_groups(self):
-        """Récupère les groupes de newsletters depuis le Gist"""
-        user_data = self.load_user_data()
-        return user_data.get('newsletter_groups', [])
-    
-    def save_newsletter_groups(self, newsletter_groups):
-        """Sauvegarde les groupes de newsletters dans le Gist"""
-        user_data = self.load_user_data()
-        user_data['newsletter_groups'] = newsletter_groups
-        self.save_user_data(user_data)
     
     def render_newsletter_management(self):
-        """Interface de gestion des newsletters avec onglets"""
+        """Interface de gestion des newsletters"""
+        st.markdown("### Gestion des newsletters", unsafe_allow_html=True)
         
-        # Créer une nouvelle newsletter
-        with st.expander('Créer une nouvelle newsletter', expanded=True):
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                new_newsletter_title = st.text_input(
-                    "Nom de la newsletter:",
-                    placeholder="ex: Actualités Tech",
-                    help="Nom de votre newsletter"
-                )
-            with col2:
-                st.write("")  # Espacement
-                st.write("")  # Espacement
-                if st.button("Créer la newsletter", type="primary", icon=":material/add:", key="create_newsletter_btn"):
-                    if new_newsletter_title:
-                        if self.create_newsletter(new_newsletter_title):
-                            st.success(f"Newsletter '{new_newsletter_title}' créée")
-                            st.rerun()
-                        else:
-                            st.error("Cette newsletter existe déjà")
-                    else:
-                        st.error("Veuillez entrer un nom de newsletter")
-        
-        # Récupérer les newsletters existantes
-        newsletters = self.get_newsletters()
-        if newsletters:
-            st.markdown("#### <i class='fas fa-envelope'></i> Vos newsletters", unsafe_allow_html=True)
-            
-            # Créer des onglets pour chaque newsletter
-            newsletter_names = [newsletter.get('title', newsletter.get('name', 'Sans nom')) for newsletter in newsletters]
-            selected_newsletter = st.selectbox(
-                "Choisir une newsletter:",
-                options=newsletter_names,
-                help="Sélectionnez une newsletter pour la gérer"
+        # Interface simple pour une seule newsletter
+        with st.expander("Configuration de la newsletter", expanded=True):
+            # Champ pour les emails
+            emails_text = st.text_area(
+                "Emails à surveiller",
+                value=self.get_newsletters_text(),
+                placeholder="email1@example.com\nemail2@example.com\nemail3@example.com",
+                help="Entrez un email par ligne",
+                height=100
             )
             
-            if selected_newsletter:
-                # Trouver la newsletter sélectionnée
-                selected_newsletter_data = None
-                for newsletter in newsletters:
-                    if newsletter.get('title', newsletter.get('name', '')) == selected_newsletter:
-                        selected_newsletter_data = newsletter
-                        break
-                
-                if selected_newsletter_data:
-                    st.markdown(f"### 📧 {selected_newsletter}")
-                    
-                    # Ajouter des emails à cette newsletter
-                    with st.expander('Ajouter des emails à cette newsletter', expanded=True):
-                        emails_text = st.text_area(
-                            "Emails à ajouter (un par ligne):",
-                            placeholder="email1@example.com\nemail2@example.com\nemail3@example.com",
-                            help="Entrez un email par ligne",
-                            height=100
-                        )
-                        
-                        if st.button("Ajouter les emails", type="primary", icon=":material/add:", key=f"add_emails_{selected_newsletter}"):
-                            if emails_text:
-                                # Parser les emails
-                                new_emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
-                                if new_emails:
-                                    if self.add_emails_to_newsletter(selected_newsletter, new_emails):
-                                        st.success(f"{len(new_emails)} emails ajoutés à '{selected_newsletter}'")
-                                        st.rerun()
-                                    else:
-                                        st.error("Erreur lors de l'ajout des emails")
-                                else:
-                                    st.error("Veuillez entrer au moins un email valide")
-                            else:
-                                st.error("Veuillez entrer des emails")
-                    
-                    # Afficher les emails de cette newsletter
-                    emails = selected_newsletter_data.get('emails', [])
+            if st.button("Sauvegarder les emails", type="primary", icon=":material/save:"):
+                if emails_text:
+                    # Parser les emails
+                    emails = [email.strip() for email in emails_text.split('\n') if email.strip() and '@' in email]
                     if emails:
-                        st.markdown(f"**Emails de cette newsletter ({len(emails)}):**")
-                        for i, email in enumerate(emails):
-                            col1, col2 = st.columns([4, 1])
-                            with col1:
-                                st.markdown(f"• {email}")
-                            with col2:
-                                if st.button("Supprimer", key=f"delete_email_{i}_{selected_newsletter}", icon=":material/delete:"):
-                                    self.remove_email_from_newsletter(selected_newsletter, email)
-                        st.rerun()
-                    else: 
-                        st.info("Aucun email dans cette newsletter")
-                    
-                    # Bouton pour supprimer la newsletter entière
-                    if st.button("Supprimer cette newsletter", type="secondary", icon=":material/delete:", key=f"delete_newsletter_{selected_newsletter}"):
-                        self.remove_newsletter(selected_newsletter)
-                        st.rerun()
-        else:
-            st.info("Aucune newsletter créée. Créez-en une ci-dessus.")
+                        if self.save_newsletters(emails):
+                            st.success(f"{len(emails)} emails sauvegardés")
+                        else:
+                            st.error("Erreur lors de la sauvegarde")
+                    else:
+                        st.error("Veuillez entrer au moins un email valide")
+                else:
+                    st.error("Veuillez entrer des emails")
         
         
         settings = self.get_user_settings()
@@ -699,7 +582,6 @@ class NewsletterManager:
         col1, col2 = st.columns(2)
         
         with col1:
-            
             frequency = st.selectbox(
                 "Fréquence",
                 options=['daily', 'weekly'],
