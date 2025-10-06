@@ -686,7 +686,6 @@ class NewsletterManager:
                         
                         if results:
                             st.success(f"✅ Test réussi ! {len(results)} groupe(s) traité(s). Résumés générés et emails envoyés.")
-                            st.rerun()
                         else:
                             st.warning("⚠️ Aucun contenu IA trouvé dans les newsletters pour la période sélectionnée.")
         
@@ -791,7 +790,6 @@ class NewsletterManager:
                         
                         if self.add_newsletter_group(group_title, emails, initial_settings):
                             st.success(f"✅ Groupe '{group_title}' créé avec {len(emails)} emails et configuration initiale")
-                            st.rerun()
                         else:
                             st.error("❌ Erreur lors de la création du groupe")
                     else:
@@ -926,7 +924,6 @@ class NewsletterManager:
                             
                             if self.update_group_settings(group_title, new_settings):
                                 st.success("Configuration sauvegardée !")
-                                st.rerun()
                             else:
                                 st.error("Erreur lors de la sauvegarde")
                     
@@ -943,8 +940,10 @@ class NewsletterManager:
                     
                     with col3:
                         if st.button("Supprimer", key=f"delete_{group_title}", type="secondary", icon=":material/delete:"):
-                            self.remove_newsletter_group(group_title)
-                            st.rerun()
+                            if self.remove_newsletter_group(group_title):
+                                st.success(f"Groupe '{group_title}' supprimé")
+                            else:
+                                st.error("Erreur lors de la suppression")
                     
                     # Afficher les informations de planification
                     frequency_text = {'daily': 'Quotidienne', 'weekly': 'Hebdomadaire'}[frequency]
