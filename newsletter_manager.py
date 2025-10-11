@@ -55,16 +55,16 @@ class NewsletterManager:
     def _auto_reload_data(self):
         """Recharge automatiquement les données depuis le Gist"""
         try:
+            # Mettre à jour l'email utilisateur avant de charger
+            self.user_email = st.session_state.get('user_email', 'default_user')
+            
             # Forcer le rechargement depuis le Gist
             data = self.load_from_github_gist()
             if data:
                 # Mettre à jour la session avec les nouvelles données
                 st.session_state['user_data_cache'] = data
-                # Afficher un message de succès uniquement en mode debug
-                # st.success(f"Données rechargées depuis le Gist : {len(data.get('newsletter_groups', []))} groupes")
             else:
                 # Ne pas afficher de warning si c'est un nouvel utilisateur
-                # Le système va créer les données par défaut
                 pass
         except Exception as e:
             # Ne pas afficher d'erreur si c'est juste un problème de cache
@@ -184,9 +184,12 @@ class NewsletterManager:
     def load_user_data(self):
         """Charge les données utilisateur depuis le Gist uniquement"""
         try:
+            # Mettre à jour l'email utilisateur avant de charger
+            if hasattr(st, 'session_state') and 'user_email' in st.session_state:
+                self.user_email = st.session_state['user_email']
             
             # Vérifier d'abord le cache en session
-            if 'user_data_cache' in st.session_state:
+            if hasattr(st, 'session_state') and 'user_data_cache' in st.session_state:
                 cached_data = st.session_state['user_data_cache']
                 return cached_data
             
@@ -194,7 +197,8 @@ class NewsletterManager:
             data = self.load_from_github_gist()
             if data:
                 # Mettre en cache
-                st.session_state['user_data_cache'] = data
+                if hasattr(st, 'session_state'):
+                    st.session_state['user_data_cache'] = data
                 return data
             else:
                 # Pas de données dans le Gist - retourner des données par défaut
@@ -202,7 +206,8 @@ class NewsletterManager:
                     'newsletter_groups': []
                 }
                 # Mettre en cache les données par défaut
-                st.session_state['user_data_cache'] = default_data
+                if hasattr(st, 'session_state'):
+                    st.session_state['user_data_cache'] = default_data
                 return default_data
                     
         except Exception as e:
@@ -222,30 +227,22 @@ class NewsletterManager:
             try:
                 if hasattr(st, 'secrets') and 'GIST_ID' in st.secrets:
                     gist_id = st.secrets['GIST_ID']
-                    print(f"🔍 DEBUG: GIST_ID trouvé dans secrets: {gist_id}")
             except:
                 pass
             
             # Fallback sur les variables d'environnement (pour GitHub Actions)
             if not gist_id:
                 gist_id = os.getenv('GIST_ID')
-                if gist_id:
-                    print(f"🔍 DEBUG: GIST_ID trouvé dans env: {gist_id}")
             
             # Fallback sur la session state
             if not gist_id:
                 gist_id = st.session_state.get('gist_id') if hasattr(st, 'session_state') else None
-                if gist_id:
-                    print(f"🔍 DEBUG: GIST_ID trouvé dans session: {gist_id}")
             
             if not gist_id:
-                print("❌ DEBUG: GIST_ID non trouvé")
                 return None
             
             import requests
             response = requests.get(f'https://api.github.com/gists/{gist_id}')
-            
-            print(f"🔍 DEBUG: Réponse Gist: {response.status_code}")
             
             if response.status_code == 200:
                 gist_data = response.json()
@@ -253,27 +250,17 @@ class NewsletterManager:
                     content = gist_data['files']['user_data.json']['content']
                     all_users_data = json.loads(content) if content else {}
                     
-                    print(f"🔍 DEBUG: Utilisateurs dans Gist: {list(all_users_data.keys())}")
-                    print(f"🔍 DEBUG: Email actuel: {self.user_email}")
-                    
                     # Retourner les données de cet utilisateur spécifique
                     if self.user_email in all_users_data:
                         user_data = all_users_data[self.user_email]
-                        print(f"✅ DEBUG: Données utilisateur trouvées : {len(user_data.get('newsletter_groups', []))} groupes")
                         return user_data
                     else:
                         # Utilisateur pas encore dans le Gist - retourner des données par défaut
-                        print(f"⚠️ DEBUG: Utilisateur {self.user_email} pas dans le Gist")
                         return {
                             'newsletter_groups': []
                         }
-                else:
-                    print("❌ DEBUG: Fichier user_data.json non trouvé dans le Gist")
-            else:
-                print(f"❌ DEBUG: Erreur HTTP {response.status_code}")
             return None
         except Exception as e:
-            print(f"❌ DEBUG: Exception lors du chargement: {e}")
             return None
     
     def save_user_data(self, data):
