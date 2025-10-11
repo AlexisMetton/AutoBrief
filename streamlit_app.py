@@ -80,15 +80,18 @@ def main():
         return
     
     auth = SecureAuth()
-    newsletter_manager = NewsletterManager()
     
     # Créer le header (toujours affiché)
     create_header()
         
-        # Authentification
+    # Authentification
     if not auth.authenticate_user():
         st.stop()
-        
+    
+    # Créer le NewsletterManager APRÈS l'authentification
+    # pour que self.user_email soit correctement défini
+    newsletter_manager = NewsletterManager()
+    
     # L'envoi automatique se fait uniquement via GitHub Actions
     # Pas d'envoi automatique lors de la connexion à l'interface
     
