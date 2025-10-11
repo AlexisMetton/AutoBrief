@@ -22,8 +22,8 @@ class NewsletterManager:
         # Détecter automatiquement la reconnexion
         self._detect_reconnection()
         
-        # Vérifier la configuration du Gist au démarrage
-        self.check_gist_configuration()
+        # Désactiver la vérification du Gist au démarrage (trop intrusive)
+        # self.check_gist_configuration()
     
     def _detect_reconnection(self):
         """Détecte automatiquement la reconnexion et recharge les données"""
